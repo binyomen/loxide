@@ -8,8 +8,54 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest, windows-latest]
-        rust: [stable, nightly, beta]
+        include:
+        - os: ubuntu-latest
+          rust: stable
+          target: i686-unknown-linux-gnu
+        - os: ubuntu-latest
+          rust: stable
+          target: x86_64-unknown-linux-gnu
+        - os: ubuntu-latest
+          rust: nightly
+          target: i686-unknown-linux-gnu
+        - os: ubuntu-latest
+          rust: nightly
+          target: x86_64-unknown-linux-gnu
+        - os: ubuntu-latest
+          rust: beta
+          target: i686-unknown-linux-gnu
+        - os: ubuntu-latest
+          rust: beta
+          target: x86_64-unknown-linux-gnu
+
+        - os: macos-latest
+          rust: stable
+          target: x86_64-apple-darwin
+        - os: macos-latest
+          rust: nightly
+          target: x86_64-apple-darwin
+        - os: macos-latest
+          rust: beta
+          target: x86_64-apple-darwin
+
+        - os: windows-latest
+          rust: stable
+          target: i686-pc-windows-msvc
+        - os: windows-latest
+          rust: stable
+          target: x86_64-pc-windows-msvc
+        - os: windows-latest
+          rust: nightly
+          target: i686-pc-windows-msvc
+        - os: windows-latest
+          rust: nightly
+          target: x86_64-pc-windows-msvc
+        - os: windows-latest
+          rust: beta
+          target: i686-pc-windows-msvc
+        - os: windows-latest
+          rust: beta
+          target: x86_64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
@@ -19,31 +65,24 @@ jobs:
       with:
         profile: minimal
         toolchain: ${{ matrix.rust }}
+        target: ${{ matrix.target }}
         components: clippy
         override: true
 
+    - name: Install cross
+      run: cargo install cross
+
     - name: Debug build
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --all-targets --all-features
+      run: cross build --target ${{ matrix.target }} --all-features -vv
 
     - name: Release build
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --release --all-targets --all-features
+      run: cross build --release --target ${{ matrix.target }} --all-features -vv
 
     - name: Clippy
-      uses: actions-rs/cargo@v1
-      with:
-        command: clippy
-        args: --all-targets --all-features -- -D warnings
+      run: cross clippy --target ${{ matrix.target }} --all-features -vv -- -D warnings
 
     - name: Test
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
+      run: cross test --target ${{ matrix.target }} -vv
 
   check-format:
     runs-on: ubuntu-latest
@@ -62,4 +101,4 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: fmt
-        args: -- --check
+        args: -v -- --check
