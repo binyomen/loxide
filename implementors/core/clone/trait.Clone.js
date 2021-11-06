@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["loxide"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.56.1/core/clone/trait.Clone.html\" title=\"trait core::clone::Clone\">Clone</a> for <a class=\"enum\" href=\"loxide/chunk/enum.OpCode.html\" title=\"enum loxide::chunk::OpCode\">OpCode</a>","synthetic":false,"types":["loxide::chunk::OpCode"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

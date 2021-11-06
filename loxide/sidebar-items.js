@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["test",""]]});
+initSidebarItems({"fn":[["test",""]],"mod":[["chunk","Utilities for dealing with chunks of bytecode."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["OpCode","A byte representing an instruction in the interpreter’s bytecode."]],"struct":[["Chunk","A chunk of bytecode, representing a top-level program or a function."],["CodeByte","A single byte used in the interpreter’s bytecode. A newtype for `u8`."]]});
