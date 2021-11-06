@@ -1,3 +1,5 @@
+use loxide::test;
+
 fn main() {
-    println!("Hello, world!");
+    test();
 }
