@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["value_to_string",""]],"struct":[["Value","A Lox value as represented in the interpreter. For example, this can represent a number, a string, a class instance, etc."]]});
