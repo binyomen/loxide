@@ -1,3 +1,5 @@
+//! Utilities for dealing with Lox values.
+
 /// A Lox value as represented in the interpreter. For example, this can
 /// represent a number, a string, a class instance, etc.
 #[derive(Debug, PartialEq)]

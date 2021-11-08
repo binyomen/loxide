@@ -1,3 +1,5 @@
+//! Utilities to help debug the interpreter.
+
 use {
     crate::{
         chunk::{Chunk, Instruction},
