@@ -12,7 +12,11 @@
 <span id="12">12</span>
 <span id="13">13</span>
 <span id="14">14</span>
-</pre><pre class="rust"><code><span class="doccomment">/// A Lox value as represented in the interpreter. For example, this can</span>
+<span id="15">15</span>
+<span id="16">16</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Utilities for dealing with Lox values.</span>
+
+<span class="doccomment">/// A Lox value as represented in the interpreter. For example, this can</span>
 <span class="doccomment">/// represent a number, a string, a class instance, etc.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Value</span>(<span class="ident">f64</span>);
