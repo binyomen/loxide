@@ -56,6 +56,7 @@ pub enum Instruction {
 pub struct Chunk {
     code: Vec<CodeByte>,
     constants: Vec<Value>,
+    lines: Vec<usize>,
 }
 
 impl Chunk {
@@ -63,16 +64,17 @@ impl Chunk {
         Self {
             code: Vec::new(),
             constants: Vec::new(),
+            lines: Vec::new(),
         }
     }
 
-    pub fn add_constant_instruction(&mut self, constant_index: u8) {
-        self.add_byte(OpCode::Constant.as_byte());
-        self.add_byte(CodeByte::new(constant_index));
+    pub fn add_constant_instruction(&mut self, constant_index: u8, line_number: usize) {
+        self.add_byte(OpCode::Constant.as_byte(), line_number);
+        self.add_byte(CodeByte::new(constant_index), line_number);
     }
 
-    pub fn add_return_instruction(&mut self) {
-        self.add_byte(OpCode::Return.as_byte());
+    pub fn add_return_instruction(&mut self, line_number: usize) {
+        self.add_byte(OpCode::Return.as_byte(), line_number);
     }
 
     /// Add a constant to the chunk. This function returns the index of the
@@ -97,8 +99,13 @@ impl Chunk {
         }
     }
 
-    fn add_byte(&mut self, byte: CodeByte) {
+    pub fn line_at_offset(&self, offset: usize) -> usize {
+        self.lines[offset]
+    }
+
+    fn add_byte(&mut self, byte: CodeByte, line_number: usize) {
         self.code.push(byte);
+        self.lines.push(line_number);
     }
 }
 
@@ -197,12 +204,13 @@ mod tests {
     #[test]
     fn chunk_can_add_instructions() {
         let mut chunk = Chunk::new();
-        chunk.add_constant_instruction(23);
-        chunk.add_return_instruction();
+        chunk.add_constant_instruction(23, 150);
+        chunk.add_return_instruction(99);
         assert_eq!(
             chunk.code,
             vec![CodeByte::new(0), CodeByte::new(23), CodeByte::new(1)]
         );
+        assert_eq!(chunk.lines, vec![150, 150, 99]);
     }
 
     #[test]
@@ -221,7 +229,7 @@ mod tests {
         {
             let chunk = {
                 let mut chunk = Chunk::new();
-                chunk.add_return_instruction();
+                chunk.add_return_instruction(100);
                 chunk
             };
             let mut cursor = chunk.cursor();
@@ -231,8 +239,8 @@ mod tests {
         {
             let chunk = {
                 let mut chunk = Chunk::new();
-                chunk.add_return_instruction();
-                chunk.add_constant_instruction(87);
+                chunk.add_return_instruction(100);
+                chunk.add_constant_instruction(87, 123);
                 chunk
             };
             let mut cursor = chunk.cursor();
@@ -246,8 +254,8 @@ mod tests {
     fn cursor_fails_to_read_constant_instruction_at_end_of_chunk() {
         let chunk = {
             let mut chunk = Chunk::new();
-            chunk.add_return_instruction();
-            chunk.add_byte(OpCode::Constant.as_byte());
+            chunk.add_return_instruction(100);
+            chunk.add_byte(OpCode::Constant.as_byte(), 123);
             chunk
         };
         let mut cursor = chunk.cursor();

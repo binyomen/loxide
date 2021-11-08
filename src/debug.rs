@@ -1,6 +1,6 @@
 use {
     crate::{
-        chunk::{Chunk, ChunkCursor, Instruction},
+        chunk::{Chunk, Instruction},
         value::{value_to_string, Value},
     },
     std::fmt::Display,
@@ -11,13 +11,22 @@ pub fn disassemble_chunk(chunk: &Chunk, name: impl Display) {
     println!("== {} ==", name);
 
     let mut cursor = chunk.cursor();
+    let mut offset = cursor.offset();
     while let Some(instruction) = cursor.read_instruction() {
-        disassemble_instruction(chunk, &cursor, instruction);
+        disassemble_instruction(chunk, offset, instruction);
+        offset = cursor.offset();
     }
 }
 
-fn disassemble_instruction(chunk: &Chunk, cursor: &ChunkCursor, instruction: Instruction) {
-    print!("{:04} ", cursor.offset());
+fn disassemble_instruction(chunk: &Chunk, offset: usize, instruction: Instruction) {
+    print!("{:04} ", offset);
+
+    // If we're at the same line number as the previous instruction, just print a pipe.
+    if offset > 0 && chunk.line_at_offset(offset) == chunk.line_at_offset(offset - 1) {
+        print!("   | ");
+    } else {
+        print!("{:4} ", chunk.line_at_offset(offset));
+    }
 
     match instruction {
         Instruction::Constant(index) => {
