@@ -10,10 +10,10 @@ use {
 /// A single byte used in the interpreter's bytecode. A newtype for `u8`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(transparent)]
-pub struct CodeByte(u8);
+struct CodeByte(u8);
 
 impl CodeByte {
-    pub fn new(byte: u8) -> Self {
+    fn new(byte: u8) -> Self {
         Self(byte)
     }
 }
@@ -21,7 +21,7 @@ impl CodeByte {
 /// A byte representing an instruction in the interpreter's bytecode.
 #[derive(Clone, Copy, Debug, EnumCount, EnumIter, Eq, PartialEq)]
 #[repr(u8)]
-pub enum OpCode {
+enum OpCode {
     Constant,
     Return,
 }
@@ -40,7 +40,7 @@ impl OpCode {
         unsafe { transmute::<CodeByte, Self>(byte) }
     }
 
-    pub fn as_byte(&self) -> CodeByte {
+    fn as_byte(&self) -> CodeByte {
         CodeByte::new(*self as u8)
     }
 }
@@ -66,8 +66,13 @@ impl Chunk {
         }
     }
 
-    pub fn add_byte(&mut self, byte: CodeByte) {
-        self.code.push(byte);
+    pub fn add_constant_instruction(&mut self, constant_index: u8) {
+        self.add_byte(OpCode::Constant.as_byte());
+        self.add_byte(CodeByte::new(constant_index));
+    }
+
+    pub fn add_return_instruction(&mut self) {
+        self.add_byte(OpCode::Return.as_byte());
     }
 
     /// Add a constant to the chunk. This function returns the index of the
@@ -90,6 +95,10 @@ impl Chunk {
             chunk: self,
             offset: 0,
         }
+    }
+
+    fn add_byte(&mut self, byte: CodeByte) {
+        self.code.push(byte);
     }
 }
 
@@ -186,11 +195,14 @@ mod tests {
     }
 
     #[test]
-    fn chunk_can_add_byte() {
+    fn chunk_can_add_instructions() {
         let mut chunk = Chunk::new();
-        chunk.add_byte(CodeByte::new(123));
-        chunk.add_byte(CodeByte::new(18));
-        assert_eq!(chunk.code.len(), 2);
+        chunk.add_constant_instruction(23);
+        chunk.add_return_instruction();
+        assert_eq!(
+            chunk.code,
+            vec![CodeByte::new(0), CodeByte::new(23), CodeByte::new(1)]
+        );
     }
 
     #[test]
@@ -205,11 +217,11 @@ mod tests {
     }
 
     #[test]
-    fn chunk_can_read_instructions() {
+    fn cursor_can_read_instructions() {
         {
             let chunk = {
                 let mut chunk = Chunk::new();
-                chunk.add_byte(CodeByte::new(1));
+                chunk.add_return_instruction();
                 chunk
             };
             let mut cursor = chunk.cursor();
@@ -219,9 +231,8 @@ mod tests {
         {
             let chunk = {
                 let mut chunk = Chunk::new();
-                chunk.add_byte(CodeByte::new(1));
-                chunk.add_byte(CodeByte::new(0));
-                chunk.add_byte(CodeByte::new(87));
+                chunk.add_return_instruction();
+                chunk.add_constant_instruction(87);
                 chunk
             };
             let mut cursor = chunk.cursor();
@@ -229,5 +240,24 @@ mod tests {
             assert_eq!(cursor.read_instruction(), Some(Instruction::Constant(87)));
             assert_eq!(cursor.read_instruction(), None);
         }
+    }
+
+    #[test]
+    fn cursor_fails_to_read_constant_instruction_at_end_of_chunk() {
+        let chunk = {
+            let mut chunk = Chunk::new();
+            chunk.add_return_instruction();
+            chunk.add_byte(OpCode::Constant.as_byte());
+            chunk
+        };
+        let mut cursor = chunk.cursor();
+        assert_eq!(cursor.read_instruction(), Some(Instruction::Return));
+        assert_eq!(
+            *catch_unwind(move || { cursor.read_instruction() })
+                .unwrap_err()
+                .downcast_ref::<&str>()
+                .unwrap(),
+            "No byte following Constant op code."
+        );
     }
 }
