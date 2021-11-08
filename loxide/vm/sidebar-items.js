@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["InterpretError","An error returned from the interpreter, either a compile error or a runtime error."]],"struct":[["Vm","The actual virtual machine that executes Lox bytecode."]]});

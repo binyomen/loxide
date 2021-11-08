@@ -1,3 +1,3 @@
 var N = null;var sourcesIndex = {};
-sourcesIndex["loxide"] = {"name":"","files":["chunk.rs","debug.rs","lib.rs","value.rs"]};
+sourcesIndex["loxide"] = {"name":"","files":["chunk.rs","debug.rs","lib.rs","value.rs","vm.rs"]};
 createSourceSidebar();
