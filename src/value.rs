@@ -14,3 +14,29 @@ impl Value {
 pub fn value_to_string(value: &Value) -> String {
     value.0.to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn value_to_string_works() {
+        assert_eq!(value_to_string(&Value::new(0.0)), "0");
+        assert_eq!(value_to_string(&Value::new(-0.0)), "-0");
+        assert_eq!(value_to_string(&Value::new(1.0)), "1");
+        assert_eq!(value_to_string(&Value::new(-1.0)), "-1");
+        assert_eq!(
+            value_to_string(&Value::new(283928.0283093)),
+            "283928.0283093"
+        );
+        assert_eq!(
+            value_to_string(&Value::new(-283928.0283093)),
+            "-283928.0283093"
+        );
+
+        assert_eq!(value_to_string(&Value::new(1.0 / 0.0)), "inf");
+        assert_eq!(value_to_string(&Value::new(-1.0 / 0.0)), "-inf");
+        assert_eq!(value_to_string(&Value::new(0.0 / 0.0)), "NaN");
+        assert_eq!(value_to_string(&Value::new(-0.0 / 0.0)), "NaN");
+    }
+}
