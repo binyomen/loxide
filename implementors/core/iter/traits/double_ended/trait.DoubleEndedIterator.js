@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["loxide"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.56.1/core/iter/traits/double_ended/trait.DoubleEndedIterator.html\" title=\"trait core::iter::traits::double_ended::DoubleEndedIterator\">DoubleEndedIterator</a> for <a class=\"struct\" href=\"loxide/chunk/struct.OpCodeIter.html\" title=\"struct loxide::chunk::OpCodeIter\">OpCodeIter</a>","synthetic":false,"types":["loxide::chunk::OpCodeIter"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
