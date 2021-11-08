@@ -1,6 +1,10 @@
 //! Utilities for dealing with chunks of bytecode.
 
-use std::mem::transmute;
+use {
+    std::mem::transmute,
+    strum::EnumCount,
+    strum_macros::{EnumCount, EnumIter},
+};
 
 /// A single byte used in the interpreter's bytecode. A newtype for `u8`.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -14,11 +18,10 @@ impl CodeByte {
 }
 
 /// A byte representing an instruction in the interpreter's bytecode.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, EnumCount, EnumIter)]
 #[repr(u8)]
 pub enum OpCode {
     Return = 0x0,
-    Count,
 }
 
 impl OpCode {
@@ -28,7 +31,7 @@ impl OpCode {
     /// code results in undefined behavior.
     fn from_byte(byte: CodeByte) -> Self {
         #[cfg(debug_assertions)]
-        if byte.0 >= OpCode::Count as u8 {
+        if byte.0 >= OpCode::COUNT as u8 {
             panic!("Value {} is not a valid op code.", byte.0);
         }
 
@@ -84,7 +87,6 @@ impl<'a> ChunkCursor<'a> {
                     self.offset += 1;
                     Some(Instruction::Return)
                 }
-                OpCode::Count => unreachable!(),
             }
         }
     }
@@ -103,6 +105,7 @@ mod tests {
     use {
         super::*,
         std::{mem::size_of, panic::catch_unwind},
+        strum::IntoEnumIterator,
     };
 
     #[test]
@@ -120,9 +123,9 @@ mod tests {
     fn op_code_has_correct_representation() {
         assert_eq!(size_of::<OpCode>(), size_of::<u8>());
 
-        assert_eq!(OpCode::Return.as_byte(), CodeByte::new(0));
-
-        assert_eq!(OpCode::Count as u8, 1);
+        for (i, val) in OpCode::iter().enumerate() {
+            assert_eq!(val.as_byte(), CodeByte::new(i.try_into().unwrap()));
+        }
     }
 
     #[test]
