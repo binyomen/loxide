@@ -1,8 +1,9 @@
 mod chunk;
 mod debug;
 mod value;
+mod vm;
 
-use {chunk::Chunk, debug::disassemble_chunk, value::Value};
+use {chunk::Chunk, debug::disassemble_chunk, value::Value, vm::Vm};
 
 pub fn test() {
     let mut chunk = Chunk::new();
@@ -13,4 +14,7 @@ pub fn test() {
     chunk.add_return_instruction(123);
 
     disassemble_chunk(&chunk, "test chunk");
+
+    let mut vm = Vm::new(&chunk);
+    vm.interpret().unwrap();
 }
