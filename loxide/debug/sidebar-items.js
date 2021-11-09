@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["disassemble_chunk","Print out a disassembly of the given chunk."],["disassemble_constant_instruction",""],["disassemble_instruction",""],["disassemble_simple_instruction",""]]});
+initSidebarItems({"fn":[["disassemble_chunk","Print out a disassembly of the given chunk."],["disassemble_constant_instruction",""],["disassemble_instruction","Print out a disassembly of the given instruction from the given chunk."],["disassemble_simple_instruction",""]]});
