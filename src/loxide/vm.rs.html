@@ -204,6 +204,17 @@
 <span id="204">204</span>
 <span id="205">205</span>
 <span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
 </pre><pre class="rust"><code><span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;debug_trace_execution&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::debug::disassemble_instruction</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
@@ -306,6 +317,18 @@
                     <span class="kw">let</span> <span class="ident">constant</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">chunk</span>.<span class="ident">get_constant</span>(<span class="ident">index</span>);
                     <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">push</span>(<span class="ident">constant</span>.<span class="ident">clone</span>());
                 }
+                <span class="ident">Instruction::Add</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="self">self</span>.<span class="ident">execute_binary_operation</span>(<span class="ident">Value::add</span>);
+                }
+                <span class="ident">Instruction::Subtract</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="self">self</span>.<span class="ident">execute_binary_operation</span>(<span class="ident">Value::subtract</span>);
+                }
+                <span class="ident">Instruction::Multiply</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="self">self</span>.<span class="ident">execute_binary_operation</span>(<span class="ident">Value::multiply</span>);
+                }
+                <span class="ident">Instruction::Divide</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="self">self</span>.<span class="ident">execute_binary_operation</span>(<span class="ident">Value::divide</span>);
+                }
                 <span class="ident">Instruction::Negate</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">let</span> <span class="ident">negated_value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">pop</span>().<span class="ident">negate</span>();
                     <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">push</span>(<span class="ident">negated_value</span>)
@@ -316,6 +339,12 @@
                 }
             }
         }
+    }
+
+    <span class="kw">fn</span> <span class="ident">execute_binary_operation</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">op</span>: <span class="kw">impl</span> <span class="ident">FnOnce</span>(<span class="kw-2">&amp;</span><span class="ident">Value</span>, <span class="ident">Value</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Value</span>) {
+        <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">pop</span>();
+        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">pop</span>();
+        <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">push</span>(<span class="ident">op</span>(<span class="kw-2">&amp;</span><span class="ident">a</span>, <span class="ident">b</span>));
     }
 }
 
@@ -367,14 +396,7 @@
             <span class="ident">stack</span>.<span class="ident">push</span>(<span class="ident">Value::new</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">f64</span>));
         }
 
-        <span class="macro">assert_eq!</span>(
-            <span class="ident">stack</span>
-                .<span class="ident">data</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">take_while</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">is_some</span>())
-                .<span class="ident">fold</span>(<span class="number">0</span>, <span class="op">|</span><span class="ident">acc</span>, <span class="kw">_</span><span class="op">|</span> { <span class="ident">acc</span> <span class="op">+</span> <span class="number">1</span> }),
-            <span class="number">256</span>
-        );
+        <span class="macro">assert_eq!</span>(<span class="ident">stack</span>.<span class="ident">data</span>.<span class="ident">iter</span>().<span class="ident">take_while</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">is_some</span>()).<span class="ident">count</span>(), <span class="number">256</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>

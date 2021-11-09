@@ -52,6 +52,10 @@
 <span id="52">52</span>
 <span id="53">53</span>
 <span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Utilities to help debug the interpreter.</span>
 
 <span class="kw">use</span> {
@@ -89,6 +93,10 @@
         <span class="ident">Instruction::Constant</span>(<span class="ident">index</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">disassemble_constant_instruction</span>(<span class="ident">chunk</span>.<span class="ident">get_constant</span>(<span class="kw-2">*</span><span class="ident">index</span>), <span class="kw-2">*</span><span class="ident">index</span>)
         }
+        <span class="ident">Instruction::Add</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">disassemble_simple_instruction</span>(<span class="string">&quot;Add&quot;</span>),
+        <span class="ident">Instruction::Subtract</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">disassemble_simple_instruction</span>(<span class="string">&quot;Subtract&quot;</span>),
+        <span class="ident">Instruction::Multiply</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">disassemble_simple_instruction</span>(<span class="string">&quot;Multiply&quot;</span>),
+        <span class="ident">Instruction::Divide</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">disassemble_simple_instruction</span>(<span class="string">&quot;Divide&quot;</span>),
         <span class="ident">Instruction::Negate</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">disassemble_simple_instruction</span>(<span class="string">&quot;Negate&quot;</span>),
         <span class="ident">Instruction::Return</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">disassemble_simple_instruction</span>(<span class="string">&quot;Return&quot;</span>),
     }

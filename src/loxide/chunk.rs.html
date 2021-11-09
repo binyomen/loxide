@@ -282,6 +282,60 @@
 <span id="282">282</span>
 <span id="283">283</span>
 <span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Utilities for dealing with chunks of bytecode.</span>
 
 <span class="kw">use</span> {
@@ -307,6 +361,10 @@
 <span class="attribute">#[<span class="ident">repr</span>(<span class="ident">u8</span>)]</span>
 <span class="kw">enum</span> <span class="ident">OpCode</span> {
     <span class="ident">Constant</span>,
+    <span class="ident">Add</span>,
+    <span class="ident">Subtract</span>,
+    <span class="ident">Multiply</span>,
+    <span class="ident">Divide</span>,
     <span class="ident">Negate</span>,
     <span class="ident">Return</span>,
 }
@@ -334,6 +392,10 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Instruction</span> {
     <span class="ident">Constant</span>(<span class="ident">u8</span>),
+    <span class="ident">Add</span>,
+    <span class="ident">Subtract</span>,
+    <span class="ident">Multiply</span>,
+    <span class="ident">Divide</span>,
     <span class="ident">Negate</span>,
     <span class="ident">Return</span>,
 }
@@ -363,6 +425,22 @@
         <span class="self">self</span>.<span class="ident">add_byte</span>(<span class="ident">OpCode::Return</span>.<span class="ident">as_byte</span>(), <span class="ident">line_number</span>);
     }
 
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_add_instruction</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">line_number</span>: <span class="ident">usize</span>) {
+        <span class="self">self</span>.<span class="ident">add_byte</span>(<span class="ident">OpCode::Add</span>.<span class="ident">as_byte</span>(), <span class="ident">line_number</span>);
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_subtract_instruction</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">line_number</span>: <span class="ident">usize</span>) {
+        <span class="self">self</span>.<span class="ident">add_byte</span>(<span class="ident">OpCode::Subtract</span>.<span class="ident">as_byte</span>(), <span class="ident">line_number</span>);
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_multiply_instruction</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">line_number</span>: <span class="ident">usize</span>) {
+        <span class="self">self</span>.<span class="ident">add_byte</span>(<span class="ident">OpCode::Multiply</span>.<span class="ident">as_byte</span>(), <span class="ident">line_number</span>);
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_divide_instruction</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">line_number</span>: <span class="ident">usize</span>) {
+        <span class="self">self</span>.<span class="ident">add_byte</span>(<span class="ident">OpCode::Divide</span>.<span class="ident">as_byte</span>(), <span class="ident">line_number</span>);
+    }
+
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_negate_instruction</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">line_number</span>: <span class="ident">usize</span>) {
         <span class="self">self</span>.<span class="ident">add_byte</span>(<span class="ident">OpCode::Negate</span>.<span class="ident">as_byte</span>(), <span class="ident">line_number</span>);
     }
@@ -373,8 +451,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Chunks can currently only store up to 256 constants.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_constant</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">constant</span>: <span class="ident">Value</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u8</span> {
+        <span class="macro">debug_assert!</span>(<span class="self">self</span>.<span class="ident">constants</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">Into</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::into</span>(<span class="ident">u8::MAX</span>) <span class="op">+</span> <span class="number">1</span>);
         <span class="self">self</span>.<span class="ident">constants</span>.<span class="ident">push</span>(<span class="ident">constant</span>);
-        <span class="macro">debug_assert!</span>(<span class="self">self</span>.<span class="ident">constants</span>.<span class="ident">len</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="ident">u8::MAX</span>.<span class="ident">into</span>());
         (<span class="self">self</span>.<span class="ident">constants</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">u8</span>
     }
 
@@ -422,6 +500,10 @@
                     <span class="self">self</span>.<span class="ident">offset</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
                     <span class="prelude-val">Some</span>(<span class="ident">Instruction::Constant</span>(<span class="ident">index</span>))
                 }
+                <span class="ident">OpCode::Add</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Instruction::Add</span>),
+                <span class="ident">OpCode::Subtract</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Instruction::Subtract</span>),
+                <span class="ident">OpCode::Multiply</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Instruction::Multiply</span>),
+                <span class="ident">OpCode::Divide</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Instruction::Divide</span>),
                 <span class="ident">OpCode::Negate</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Instruction::Negate</span>),
                 <span class="ident">OpCode::Return</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">Instruction::Return</span>),
             }
@@ -468,20 +550,20 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">op_code_can_be_constructed_from_byte</span>() {
         <span class="macro">assert_eq!</span>(<span class="ident">OpCode::from_byte</span>(<span class="ident">CodeByte::new</span>(<span class="number">0</span>)), <span class="ident">OpCode::Constant</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">OpCode::from_byte</span>(<span class="ident">CodeByte::new</span>(<span class="number">2</span>)), <span class="ident">OpCode::Return</span>);
+        <span class="macro">assert_eq!</span>(<span class="ident">OpCode::from_byte</span>(<span class="ident">CodeByte::new</span>(<span class="number">6</span>)), <span class="ident">OpCode::Return</span>);
         <span class="macro">assert_eq!</span>(
-            <span class="kw-2">*</span><span class="ident">catch_unwind</span>(<span class="op">|</span><span class="op">|</span> { <span class="ident">OpCode::from_byte</span>(<span class="ident">CodeByte::new</span>(<span class="number">3</span>)) })
+            <span class="kw-2">*</span><span class="ident">catch_unwind</span>(<span class="op">|</span><span class="op">|</span> { <span class="ident">OpCode::from_byte</span>(<span class="ident">CodeByte::new</span>(<span class="number">7</span>)) })
                 .<span class="ident">unwrap_err</span>()
                 .<span class="ident">downcast_ref</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>()
                 .<span class="ident">unwrap</span>(),
-            <span class="string">&quot;Value 3 is not a valid op code.&quot;</span>
+            <span class="string">&quot;Value 7 is not a valid op code.&quot;</span>
         );
         <span class="macro">assert_eq!</span>(
-            <span class="kw-2">*</span><span class="ident">catch_unwind</span>(<span class="op">|</span><span class="op">|</span> { <span class="ident">OpCode::from_byte</span>(<span class="ident">CodeByte::new</span>(<span class="number">4</span>)) })
+            <span class="kw-2">*</span><span class="ident">catch_unwind</span>(<span class="op">|</span><span class="op">|</span> { <span class="ident">OpCode::from_byte</span>(<span class="ident">CodeByte::new</span>(<span class="number">8</span>)) })
                 .<span class="ident">unwrap_err</span>()
                 .<span class="ident">downcast_ref</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>()
                 .<span class="ident">unwrap</span>(),
-            <span class="string">&quot;Value 4 is not a valid op code.&quot;</span>
+            <span class="string">&quot;Value 8 is not a valid op code.&quot;</span>
         );
         <span class="macro">assert_eq!</span>(
             <span class="kw-2">*</span><span class="ident">catch_unwind</span>(<span class="op">|</span><span class="op">|</span> { <span class="ident">OpCode::from_byte</span>(<span class="ident">CodeByte::new</span>(<span class="number">100</span>)) })
@@ -503,8 +585,8 @@
             <span class="macro">vec!</span>[
                 <span class="ident">CodeByte::new</span>(<span class="number">0</span>),
                 <span class="ident">CodeByte::new</span>(<span class="number">23</span>),
-                <span class="ident">CodeByte::new</span>(<span class="number">1</span>),
-                <span class="ident">CodeByte::new</span>(<span class="number">2</span>)
+                <span class="ident">CodeByte::new</span>(<span class="number">5</span>),
+                <span class="ident">CodeByte::new</span>(<span class="number">6</span>)
             ]
         );
         <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">lines</span>, <span class="macro">vec!</span>[<span class="number">150</span>, <span class="number">150</span>, <span class="number">77</span>, <span class="number">99</span>]);
@@ -519,6 +601,32 @@
 
         <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">get_constant</span>(<span class="number">0</span>), <span class="kw-2">&amp;</span><span class="ident">Value::new</span>(<span class="number">1.2</span>));
         <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">get_constant</span>(<span class="number">1</span>), <span class="kw-2">&amp;</span><span class="ident">Value::new</span>(<span class="number">500.3928</span>));
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">chunk_can_add_up_to_256_constants</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">chunk</span> <span class="op">=</span> <span class="ident">Chunk::new</span>();
+        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">256</span> {
+            <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">Value::new</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">f64</span>)), <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u8</span>)
+        }
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">chunk_cannot_add_more_than_256_constants</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">chunk</span> <span class="op">=</span> <span class="ident">Chunk::new</span>();
+        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">256</span> {
+            <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">Value::new</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">f64</span>)), <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u8</span>)
+        }
+
+        <span class="macro">assert_eq!</span>(
+            <span class="kw-2">*</span><span class="ident">catch_unwind</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
+                <span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">Value::new</span>(<span class="number">256.0</span>));
+            })
+            .<span class="ident">unwrap_err</span>()
+            .<span class="ident">downcast_ref</span>::<span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>()
+            .<span class="ident">unwrap</span>(),
+            <span class="string">&quot;assertion failed: self.constants.len() &lt; Into::&lt;usize&gt;::into(u8::MAX) + 1&quot;</span>
+        );
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
