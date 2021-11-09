@@ -2,8 +2,10 @@
 use crate::debug::disassemble_instruction;
 use crate::{
     chunk::{Chunk, ChunkCursor, Instruction},
-    value::value_to_string,
+    value::{value_to_string, Value},
 };
+
+const STACK_SIZE: usize = 256;
 
 /// An error returned from the interpreter, either a compile error or a runtime
 /// error.
@@ -13,17 +15,64 @@ pub enum InterpretError {
 // RuntimeError,
 }
 
+/// A statically-sized stack that contains values during execution.
+struct ValueStack {
+    data: [Option<Value>; STACK_SIZE],
+    index: usize,
+}
+
+impl ValueStack {
+    fn push(&mut self, value: Value) {
+        if self.index == STACK_SIZE {
+            panic!("Stack overflow!");
+        }
+
+        self.data[self.index] = Some(value);
+        self.index += 1;
+    }
+
+    fn pop(&mut self) -> Value {
+        if self.index == 0 {
+            panic!("Cannot pop from an empty stack.");
+        }
+
+        self.index -= 1;
+        self.data[self.index].take().unwrap()
+    }
+
+    #[cfg(feature = "debug_trace_execution")]
+    fn debug_print(&self) {
+        print!("          ");
+
+        if self.index == 0 {
+            println!("Stack is empty");
+            return;
+        }
+
+        for i in 0..self.index {
+            print!("[ {} ]", value_to_string(&self.data[i].as_ref().unwrap()));
+        }
+        println!();
+    }
+}
+
 /// The actual virtual machine that executes Lox bytecode.
 pub struct Vm<'a> {
     chunk: &'a Chunk,
     cursor: ChunkCursor<'a>,
+    stack: ValueStack,
 }
 
 impl<'a> Vm<'a> {
     pub fn new(chunk: &'a Chunk) -> Self {
+        const EMPTY_VALUE: Option<Value> = None;
         Self {
             chunk,
             cursor: chunk.cursor(),
+            stack: ValueStack {
+                data: [EMPTY_VALUE; STACK_SIZE],
+                index: 0,
+            },
         }
     }
 
@@ -34,16 +83,21 @@ impl<'a> Vm<'a> {
 
             let instruction = self.cursor.read_instruction().unwrap();
 
-            // Optionally trace each instruction as we execute.
+            // Optionally trace each instruction as we execute, showing the
+            // contents of the stack before each one.
             #[cfg(feature = "debug_trace_execution")]
-            disassemble_instruction(self.chunk, offset, &instruction);
+            {
+                self.stack.debug_print();
+                disassemble_instruction(self.chunk, offset, &instruction);
+            }
 
             match instruction {
                 Instruction::Constant(index) => {
                     let constant = self.chunk.get_constant(index);
-                    println!("{}", value_to_string(constant));
+                    self.stack.push(constant.clone());
                 }
                 Instruction::Return => {
+                    println!("{}", value_to_string(&self.stack.pop()));
                     return Ok(());
                 }
             }

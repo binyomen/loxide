@@ -2,7 +2,7 @@
 
 /// A Lox value as represented in the interpreter. For example, this can
 /// represent a number, a string, a class instance, etc.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Value(f64);
 
 impl Value {
