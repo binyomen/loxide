@@ -23,6 +23,7 @@ impl CodeByte {
 #[repr(u8)]
 enum OpCode {
     Constant,
+    Negate,
     Return,
 }
 
@@ -49,6 +50,7 @@ impl OpCode {
 #[derive(PartialEq, Eq, Debug)]
 pub enum Instruction {
     Constant(u8),
+    Negate,
     Return,
 }
 
@@ -75,6 +77,10 @@ impl Chunk {
 
     pub fn add_return_instruction(&mut self, line_number: usize) {
         self.add_byte(OpCode::Return.as_byte(), line_number);
+    }
+
+    pub fn add_negate_instruction(&mut self, line_number: usize) {
+        self.add_byte(OpCode::Negate.as_byte(), line_number);
     }
 
     /// Add a constant to the chunk. This function returns the index of the
@@ -132,6 +138,7 @@ impl<'a> ChunkCursor<'a> {
                     self.offset += 1;
                     Some(Instruction::Constant(index))
                 }
+                OpCode::Negate => Some(Instruction::Negate),
                 OpCode::Return => Some(Instruction::Return),
             }
         }
@@ -177,20 +184,20 @@ mod tests {
     #[test]
     fn op_code_can_be_constructed_from_byte() {
         assert_eq!(OpCode::from_byte(CodeByte::new(0)), OpCode::Constant);
-        assert_eq!(OpCode::from_byte(CodeByte::new(1)), OpCode::Return);
-        assert_eq!(
-            *catch_unwind(|| { OpCode::from_byte(CodeByte::new(2)) })
-                .unwrap_err()
-                .downcast_ref::<String>()
-                .unwrap(),
-            "Value 2 is not a valid op code."
-        );
+        assert_eq!(OpCode::from_byte(CodeByte::new(2)), OpCode::Return);
         assert_eq!(
             *catch_unwind(|| { OpCode::from_byte(CodeByte::new(3)) })
                 .unwrap_err()
                 .downcast_ref::<String>()
                 .unwrap(),
             "Value 3 is not a valid op code."
+        );
+        assert_eq!(
+            *catch_unwind(|| { OpCode::from_byte(CodeByte::new(4)) })
+                .unwrap_err()
+                .downcast_ref::<String>()
+                .unwrap(),
+            "Value 4 is not a valid op code."
         );
         assert_eq!(
             *catch_unwind(|| { OpCode::from_byte(CodeByte::new(100)) })
@@ -205,12 +212,18 @@ mod tests {
     fn chunk_can_add_instructions() {
         let mut chunk = Chunk::new();
         chunk.add_constant_instruction(23, 150);
+        chunk.add_negate_instruction(77);
         chunk.add_return_instruction(99);
         assert_eq!(
             chunk.code,
-            vec![CodeByte::new(0), CodeByte::new(23), CodeByte::new(1)]
+            vec![
+                CodeByte::new(0),
+                CodeByte::new(23),
+                CodeByte::new(1),
+                CodeByte::new(2)
+            ]
         );
-        assert_eq!(chunk.lines, vec![150, 150, 99]);
+        assert_eq!(chunk.lines, vec![150, 150, 77, 99]);
     }
 
     #[test]

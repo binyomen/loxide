@@ -35,6 +35,7 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize, instruction: &Instr
         Instruction::Constant(index) => {
             disassemble_constant_instruction(chunk.get_constant(*index), *index)
         }
+        Instruction::Negate => disassemble_simple_instruction("Negate"),
         Instruction::Return => disassemble_simple_instruction("Return"),
     }
 }

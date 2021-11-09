@@ -100,6 +100,10 @@ impl<'a> Vm<'a> {
                     let constant = self.chunk.get_constant(index);
                     self.stack.push(constant.clone());
                 }
+                Instruction::Negate => {
+                    let negated_value = self.stack.pop().negate();
+                    self.stack.push(negated_value)
+                }
                 Instruction::Return => {
                     println!("{}", value_to_string(&self.stack.pop()));
                     return Ok(());

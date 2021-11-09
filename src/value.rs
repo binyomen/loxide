@@ -9,6 +9,10 @@ impl Value {
     pub fn new(f: f64) -> Self {
         Value(f)
     }
+
+    pub fn negate(&self) -> Value {
+        Value::new(-self.0)
+    }
 }
 
 pub fn value_to_string(value: &Value) -> String {

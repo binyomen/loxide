@@ -11,6 +11,7 @@ pub fn test() {
     let constant_index = chunk.add_constant(Value::new(1.2));
     chunk.add_constant_instruction(constant_index, 123);
 
+    chunk.add_negate_instruction(123);
     chunk.add_return_instruction(123);
 
     // If we want to look at the compiled bytecode without executing it, we do
