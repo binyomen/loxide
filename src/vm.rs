@@ -100,6 +100,18 @@ impl<'a> Vm<'a> {
                     let constant = self.chunk.get_constant(index);
                     self.stack.push(constant.clone());
                 }
+                Instruction::Add => {
+                    self.execute_binary_operation(Value::add);
+                }
+                Instruction::Subtract => {
+                    self.execute_binary_operation(Value::subtract);
+                }
+                Instruction::Multiply => {
+                    self.execute_binary_operation(Value::multiply);
+                }
+                Instruction::Divide => {
+                    self.execute_binary_operation(Value::divide);
+                }
                 Instruction::Negate => {
                     let negated_value = self.stack.pop().negate();
                     self.stack.push(negated_value)
@@ -110,6 +122,12 @@ impl<'a> Vm<'a> {
                 }
             }
         }
+    }
+
+    fn execute_binary_operation(&mut self, op: impl FnOnce(&Value, Value) -> Value) {
+        let b = self.stack.pop();
+        let a = self.stack.pop();
+        self.stack.push(op(&a, b));
     }
 }
 
@@ -161,14 +179,7 @@ mod tests {
             stack.push(Value::new(i as f64));
         }
 
-        assert_eq!(
-            stack
-                .data
-                .iter()
-                .take_while(|v| v.is_some())
-                .fold(0, |acc, _| { acc + 1 }),
-            256
-        );
+        assert_eq!(stack.data.iter().take_while(|v| v.is_some()).count(), 256);
     }
 
     #[test]

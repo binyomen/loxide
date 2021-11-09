@@ -23,6 +23,10 @@ impl CodeByte {
 #[repr(u8)]
 enum OpCode {
     Constant,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
     Negate,
     Return,
 }
@@ -50,6 +54,10 @@ impl OpCode {
 #[derive(PartialEq, Eq, Debug)]
 pub enum Instruction {
     Constant(u8),
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
     Negate,
     Return,
 }
@@ -79,6 +87,22 @@ impl Chunk {
         self.add_byte(OpCode::Return.as_byte(), line_number);
     }
 
+    pub fn add_add_instruction(&mut self, line_number: usize) {
+        self.add_byte(OpCode::Add.as_byte(), line_number);
+    }
+
+    pub fn add_subtract_instruction(&mut self, line_number: usize) {
+        self.add_byte(OpCode::Subtract.as_byte(), line_number);
+    }
+
+    pub fn add_multiply_instruction(&mut self, line_number: usize) {
+        self.add_byte(OpCode::Multiply.as_byte(), line_number);
+    }
+
+    pub fn add_divide_instruction(&mut self, line_number: usize) {
+        self.add_byte(OpCode::Divide.as_byte(), line_number);
+    }
+
     pub fn add_negate_instruction(&mut self, line_number: usize) {
         self.add_byte(OpCode::Negate.as_byte(), line_number);
     }
@@ -89,8 +113,8 @@ impl Chunk {
     ///
     /// Chunks can currently only store up to 256 constants.
     pub fn add_constant(&mut self, constant: Value) -> u8 {
+        debug_assert!(self.constants.len() < Into::<usize>::into(u8::MAX) + 1);
         self.constants.push(constant);
-        debug_assert!(self.constants.len() <= u8::MAX.into());
         (self.constants.len() - 1) as u8
     }
 
@@ -138,6 +162,10 @@ impl<'a> ChunkCursor<'a> {
                     self.offset += 1;
                     Some(Instruction::Constant(index))
                 }
+                OpCode::Add => Some(Instruction::Add),
+                OpCode::Subtract => Some(Instruction::Subtract),
+                OpCode::Multiply => Some(Instruction::Multiply),
+                OpCode::Divide => Some(Instruction::Divide),
                 OpCode::Negate => Some(Instruction::Negate),
                 OpCode::Return => Some(Instruction::Return),
             }
@@ -184,20 +212,20 @@ mod tests {
     #[test]
     fn op_code_can_be_constructed_from_byte() {
         assert_eq!(OpCode::from_byte(CodeByte::new(0)), OpCode::Constant);
-        assert_eq!(OpCode::from_byte(CodeByte::new(2)), OpCode::Return);
+        assert_eq!(OpCode::from_byte(CodeByte::new(6)), OpCode::Return);
         assert_eq!(
-            *catch_unwind(|| { OpCode::from_byte(CodeByte::new(3)) })
+            *catch_unwind(|| { OpCode::from_byte(CodeByte::new(7)) })
                 .unwrap_err()
                 .downcast_ref::<String>()
                 .unwrap(),
-            "Value 3 is not a valid op code."
+            "Value 7 is not a valid op code."
         );
         assert_eq!(
-            *catch_unwind(|| { OpCode::from_byte(CodeByte::new(4)) })
+            *catch_unwind(|| { OpCode::from_byte(CodeByte::new(8)) })
                 .unwrap_err()
                 .downcast_ref::<String>()
                 .unwrap(),
-            "Value 4 is not a valid op code."
+            "Value 8 is not a valid op code."
         );
         assert_eq!(
             *catch_unwind(|| { OpCode::from_byte(CodeByte::new(100)) })
@@ -219,8 +247,8 @@ mod tests {
             vec![
                 CodeByte::new(0),
                 CodeByte::new(23),
-                CodeByte::new(1),
-                CodeByte::new(2)
+                CodeByte::new(5),
+                CodeByte::new(6)
             ]
         );
         assert_eq!(chunk.lines, vec![150, 150, 77, 99]);
@@ -235,6 +263,32 @@ mod tests {
 
         assert_eq!(chunk.get_constant(0), &Value::new(1.2));
         assert_eq!(chunk.get_constant(1), &Value::new(500.3928));
+    }
+
+    #[test]
+    fn chunk_can_add_up_to_256_constants() {
+        let mut chunk = Chunk::new();
+        for i in 0..256 {
+            assert_eq!(chunk.add_constant(Value::new(i as f64)), i as u8)
+        }
+    }
+
+    #[test]
+    fn chunk_cannot_add_more_than_256_constants() {
+        let mut chunk = Chunk::new();
+        for i in 0..256 {
+            assert_eq!(chunk.add_constant(Value::new(i as f64)), i as u8)
+        }
+
+        assert_eq!(
+            *catch_unwind(move || {
+                chunk.add_constant(Value::new(256.0));
+            })
+            .unwrap_err()
+            .downcast_ref::<&str>()
+            .unwrap(),
+            "assertion failed: self.constants.len() < Into::<usize>::into(u8::MAX) + 1"
+        );
     }
 
     #[test]
