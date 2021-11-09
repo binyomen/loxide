@@ -15,12 +15,13 @@ pub fn disassemble_chunk(chunk: &Chunk, name: impl Display) {
     let mut cursor = chunk.cursor();
     let mut offset = cursor.offset();
     while let Some(instruction) = cursor.read_instruction() {
-        disassemble_instruction(chunk, offset, instruction);
+        disassemble_instruction(chunk, offset, &instruction);
         offset = cursor.offset();
     }
 }
 
-fn disassemble_instruction(chunk: &Chunk, offset: usize, instruction: Instruction) {
+/// Print out a disassembly of the given instruction from the given chunk.
+pub fn disassemble_instruction(chunk: &Chunk, offset: usize, instruction: &Instruction) {
     print!("{:04} ", offset);
 
     // If we're at the same line number as the previous instruction, just print a pipe.
@@ -32,7 +33,7 @@ fn disassemble_instruction(chunk: &Chunk, offset: usize, instruction: Instructio
 
     match instruction {
         Instruction::Constant(index) => {
-            disassemble_constant_instruction(chunk.get_constant(index), index)
+            disassemble_constant_instruction(chunk.get_constant(*index), *index)
         }
         Instruction::Return => disassemble_simple_instruction("Return"),
     }

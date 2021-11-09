@@ -13,7 +13,12 @@ pub fn test() {
 
     chunk.add_return_instruction(123);
 
-    disassemble_chunk(&chunk, "test chunk");
+    // If we want to look at the compiled bytecode without executing it, we do
+    // that here.
+    if cfg!(feature = "debug_dump_disassembly") {
+        disassemble_chunk(&chunk, "test chunk");
+        return;
+    }
 
     let mut vm = Vm::new(&chunk);
     vm.interpret().unwrap();

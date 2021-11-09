@@ -3,6 +3,10 @@ name = "loxide"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+debug_dump_disassembly = []
+debug_trace_execution = []
+
 [dependencies]
 strum = "0.22.0"
 strum_macros = "0.22.0"

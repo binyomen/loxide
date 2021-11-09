@@ -1,3 +1,5 @@
+#[cfg(feature = "debug_trace_execution")]
+use crate::debug::disassemble_instruction;
 use crate::{
     chunk::{Chunk, ChunkCursor, Instruction},
     value::value_to_string,
@@ -27,7 +29,16 @@ impl<'a> Vm<'a> {
 
     pub fn interpret(&mut self) -> Result<(), InterpretError> {
         loop {
-            match self.cursor.read_instruction().unwrap() {
+            #[cfg(feature = "debug_trace_execution")]
+            let offset = self.cursor.offset();
+
+            let instruction = self.cursor.read_instruction().unwrap();
+
+            // Optionally trace each instruction as we execute.
+            #[cfg(feature = "debug_trace_execution")]
+            disassemble_instruction(self.chunk, offset, &instruction);
+
+            match instruction {
                 Instruction::Constant(index) => {
                     let constant = self.chunk.get_constant(index);
                     println!("{}", value_to_string(constant));
