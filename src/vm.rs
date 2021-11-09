@@ -58,7 +58,7 @@ impl ValueStack {
         }
 
         for i in 0..self.index {
-            print!("[ {} ]", value_to_string(&self.data[i].as_ref().unwrap()));
+            print!("[ {} ]", value_to_string(self.data[i].as_ref().unwrap()));
         }
         println!();
     }
