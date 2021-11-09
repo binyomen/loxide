@@ -200,6 +200,10 @@
 <span id="200">200</span>
 <span id="201">201</span>
 <span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
 </pre><pre class="rust"><code><span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;debug_trace_execution&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::debug::disassemble_instruction</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
@@ -301,6 +305,10 @@
                 <span class="ident">Instruction::Constant</span>(<span class="ident">index</span>) <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">let</span> <span class="ident">constant</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">chunk</span>.<span class="ident">get_constant</span>(<span class="ident">index</span>);
                     <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">push</span>(<span class="ident">constant</span>.<span class="ident">clone</span>());
+                }
+                <span class="ident">Instruction::Negate</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">let</span> <span class="ident">negated_value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">pop</span>().<span class="ident">negate</span>();
+                    <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">push</span>(<span class="ident">negated_value</span>)
                 }
                 <span class="ident">Instruction::Return</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">value_to_string</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">pop</span>()));

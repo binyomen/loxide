@@ -51,6 +51,7 @@
 <span id="51">51</span>
 <span id="52">52</span>
 <span id="53">53</span>
+<span id="54">54</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Utilities to help debug the interpreter.</span>
 
 <span class="kw">use</span> {
@@ -88,6 +89,7 @@
         <span class="ident">Instruction::Constant</span>(<span class="ident">index</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">disassemble_constant_instruction</span>(<span class="ident">chunk</span>.<span class="ident">get_constant</span>(<span class="kw-2">*</span><span class="ident">index</span>), <span class="kw-2">*</span><span class="ident">index</span>)
         }
+        <span class="ident">Instruction::Negate</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">disassemble_simple_instruction</span>(<span class="string">&quot;Negate&quot;</span>),
         <span class="ident">Instruction::Return</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">disassemble_simple_instruction</span>(<span class="string">&quot;Return&quot;</span>),
     }
 }
