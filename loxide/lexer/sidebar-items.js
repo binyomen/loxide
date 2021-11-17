@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["TokenType","The type of a given token, with additional information included for tokens that need it."]],"struct":[["Lexer","An iterator over Lox tokens for a source code string."],["Token","A token produced by lexing a string of source code."]]});
