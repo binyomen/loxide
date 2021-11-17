@@ -1,9 +1,38 @@
 mod chunk;
 mod debug;
+mod lexer;
 mod value;
 mod vm;
 
-use {chunk::Chunk, debug::disassemble_chunk, value::Value, vm::Vm};
+use {chunk::Chunk, debug::disassemble_chunk, lexer::Lexer, value::Value, vm::Vm};
+
+/// A stand-in for a loxide error type.
+pub struct LoxideError;
+
+/// Compile the given source code into a bytecode representation. Errors
+/// indicate compilation errors.
+pub fn compile(source_code: &str) -> Result<usize, LoxideError> {
+    let lexer = Lexer::new(source_code);
+    for token in lexer {
+        println!("{:?}", token);
+    }
+
+    // If we want to look at the compiled bytecode without executing it, we do
+    // that here.
+    // if cfg!(feature = "debug_dump_disassembly") {
+    // disassemble_chunk(&chunk, "test chunk");
+    // return;
+    // }
+
+    Ok(0)
+}
+
+/// Execute the given bytecode. Errors indicate runtime errors.
+pub fn execute(_bytecode: usize) -> Result<(), LoxideError> {
+    Ok(())
+    // let mut vm = Vm::new(&chunk);
+    // vm.interpret()?;
+}
 
 pub fn test() {
     let mut chunk = Chunk::new();

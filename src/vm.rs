@@ -7,14 +7,6 @@ use crate::{
 
 const STACK_SIZE: usize = 256;
 
-/// An error returned from the interpreter, either a compile error or a runtime
-/// error.
-#[derive(Debug)]
-pub enum InterpretError {
-    // CompileError,
-// RuntimeError,
-}
-
 /// A statically-sized stack that contains values during execution.
 struct ValueStack {
     data: [Option<Value>; STACK_SIZE],
@@ -80,7 +72,7 @@ impl<'a> Vm<'a> {
         }
     }
 
-    pub fn interpret(&mut self) -> Result<(), InterpretError> {
+    pub fn interpret(&mut self) -> Result<(), ()> {
         loop {
             #[cfg(feature = "debug_trace_execution")]
             let offset = self.cursor.offset();
