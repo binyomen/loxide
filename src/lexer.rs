@@ -51,6 +51,8 @@ enum TokenType {
 
     /// Indicates an error during lexing, including the error message.
     Error(String),
+
+    Eof,
 }
 
 /// A token produced by lexing a string of source code.
@@ -73,6 +75,7 @@ impl Token {
 pub struct Lexer<'a> {
     scanner: Peekable<Chars<'a>>,
     current_line: usize,
+    emitted_eof: bool,
 }
 
 impl<'a> Lexer<'a> {
@@ -80,6 +83,7 @@ impl<'a> Lexer<'a> {
         Self {
             scanner: source_code.chars().peekable(),
             current_line: 1,
+            emitted_eof: false,
         }
     }
 
@@ -348,6 +352,10 @@ impl<'a> Iterator for Lexer<'a> {
         self.skip_whitespace();
 
         match self.scanner.next() {
+            None if !self.emitted_eof => {
+                self.emitted_eof = true;
+                Some(self.create_token(TokenType::Eof))
+            }
             None => None,
 
             Some('(') => Some(self.create_token(TokenType::LeftParen)),
@@ -406,6 +414,7 @@ mod tests {
     use {
         super::*,
         rand::{distributions, Rng},
+        std::iter,
     };
 
     fn run_lexer(source_string: &str) -> Vec<Token> {
@@ -453,6 +462,7 @@ mod tests {
             TokenType::Var => "var".to_owned(),
             TokenType::While => "while".to_owned(),
             TokenType::Error(_) => unreachable!(),
+            TokenType::Eof => unreachable!(),
         }
     }
 
@@ -522,6 +532,8 @@ mod tests {
                 lines.push(line_source);
             }
 
+            expected_tokens.push(Token::new(TokenType::Eof, num_lines));
+
             let line_separator = if rng.gen() { "\n" } else { "\r\n" };
             let source_string = lines.join(line_separator);
 
@@ -539,7 +551,10 @@ mod tests {
     fn test_single_token(source_string: &str, expected_token_type: TokenType) {
         assert_eq!(
             run_lexer(source_string),
-            vec![Token::new(expected_token_type, 1)]
+            vec![
+                Token::new(expected_token_type, 1),
+                Token::new(TokenType::Eof, 1)
+            ]
         );
     }
 
@@ -547,6 +562,7 @@ mod tests {
         let expected_tokens = expected_token_types
             .into_iter()
             .map(|tt| Token::new(tt, 1))
+            .chain(iter::once(Token::new(TokenType::Eof, 1)))
             .collect::<Vec<_>>();
         assert_eq!(run_lexer(source_string), expected_tokens);
     }
@@ -561,11 +577,14 @@ mod tests {
         test_tokens(" ", vec![]);
         test_tokens("\t", vec![]);
         test_tokens("\r", vec![]);
-        test_tokens("\n", vec![]);
-        test_tokens("\r\n", vec![]);
+        assert_eq!(run_lexer("\n"), vec![Token::new(TokenType::Eof, 2)]);
+        assert_eq!(run_lexer("\r\n"), vec![Token::new(TokenType::Eof, 2)]);
 
         test_tokens("       ", vec![]);
-        test_tokens("  \t\r  \n ", vec![]);
+        assert_eq!(
+            run_lexer("  \t\r  \n "),
+            vec![Token::new(TokenType::Eof, 2)]
+        );
     }
 
     #[test]
@@ -771,19 +790,28 @@ mod tests {
         // Test multi-line string.
         assert_eq!(
             run_lexer("\"this is the first line\nand this is the second line\""),
-            vec![Token::new(
-                TokenType::String("this is the first line\nand this is the second line".to_owned(),),
-                2
-            )],
+            vec![
+                Token::new(
+                    TokenType::String(
+                        "this is the first line\nand this is the second line".to_owned(),
+                    ),
+                    2
+                ),
+                Token::new(TokenType::Eof, 2)
+            ],
         );
         assert_eq!(
             run_lexer("\"this is the first line with a space \n and this is the second line\""),
-            vec![Token::new(
-                TokenType::String(
-                    "this is the first line with a space \n and this is the second line".to_owned(),
+            vec![
+                Token::new(
+                    TokenType::String(
+                        "this is the first line with a space \n and this is the second line"
+                            .to_owned(),
+                    ),
+                    2
                 ),
-                2
-            )],
+                Token::new(TokenType::Eof, 2)
+            ],
         );
     }
 
@@ -1016,16 +1044,29 @@ mod tests {
 
     #[test]
     fn comments() {
-        assert_eq!(run_lexer("//a comment without a space"), vec![]);
-        assert_eq!(run_lexer("// a comment with a space"), vec![]);
-        assert_eq!(run_lexer("// a comment with a 京 character"), vec![]);
+        assert_eq!(
+            run_lexer("//a comment without a space"),
+            vec![Token::new(TokenType::Eof, 1)]
+        );
+        assert_eq!(
+            run_lexer("// a comment with a space"),
+            vec![Token::new(TokenType::Eof, 1)]
+        );
+        assert_eq!(
+            run_lexer("// a comment with a 京 character"),
+            vec![Token::new(TokenType::Eof, 1)]
+        );
         assert_eq!(
             run_lexer("and\n// a comment ending the source"),
-            vec![Token::new(TokenType::And, 1)]
+            vec![Token::new(TokenType::And, 1), Token::new(TokenType::Eof, 2)]
         );
         assert_eq!(
             run_lexer("and\n// a comment\nor\n// another comment"),
-            vec![Token::new(TokenType::And, 1), Token::new(TokenType::Or, 3)]
+            vec![
+                Token::new(TokenType::And, 1),
+                Token::new(TokenType::Or, 3),
+                Token::new(TokenType::Eof, 4)
+            ]
         );
     }
 
@@ -1039,8 +1080,22 @@ mod tests {
                 Token::new(TokenType::Identifier("second".to_owned()), 2),
                 Token::new(TokenType::Identifier("line".to_owned()), 2),
                 Token::new(TokenType::Identifier("third".to_owned()), 3),
-                Token::new(TokenType::Identifier("line".to_owned()), 3)
+                Token::new(TokenType::Identifier("line".to_owned()), 3),
+                Token::new(TokenType::Eof, 3),
             ]
+        );
+    }
+
+    #[test]
+    fn eof() {
+        assert_eq!(run_lexer("\n\n\n\n"), vec![Token::new(TokenType::Eof, 5)]);
+        assert_eq!(
+            run_lexer("\n\n\n\n// a comment"),
+            vec![Token::new(TokenType::Eof, 5)]
+        );
+        assert_eq!(
+            run_lexer("\n\n\n\n// a comment\n"),
+            vec![Token::new(TokenType::Eof, 6)]
         );
     }
 
@@ -1094,6 +1149,7 @@ mod tests {
                 Token::new(TokenType::Number(1.0), 8),
                 Token::new(TokenType::Semicolon, 8),
                 Token::new(TokenType::RightBrace, 9),
+                Token::new(TokenType::Eof, 10),
             ]
         );
     }
