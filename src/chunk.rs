@@ -139,6 +139,12 @@ impl Chunk {
     }
 }
 
+impl Default for Chunk {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// A cursor to give random access into the bytecode [`Chunk`].
 pub struct ChunkCursor<'a> {
     chunk: &'a Chunk,
