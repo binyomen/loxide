@@ -56,7 +56,7 @@ mod tests {
 
         assert_eq!(value_to_string(&Value::new(1.0 / 0.0)), "inf");
         assert_eq!(value_to_string(&Value::new(-1.0 / 0.0)), "-inf");
-        assert_eq!(value_to_string(&Value::new(0.0 / 0.0)), "NaN");
+        assert_eq!(value_to_string(&Value::new(f64::NAN)), "NaN");
         assert_eq!(value_to_string(&Value::new(-0.0 / 0.0)), "NaN");
     }
 

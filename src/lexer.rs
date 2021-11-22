@@ -1,7 +1,4 @@
-use std::{
-    iter::Peekable,
-    str::{Chars, FromStr},
-};
+use std::{iter::Peekable, ops::Range, str::CharIndices};
 
 /// The type of a given token, with additional information included for tokens
 /// that need it.
@@ -28,9 +25,9 @@ enum TokenType {
     Less,
     LessEqual,
 
-    Identifier(String),
-    String(String),
-    Number(f64),
+    Identifier,
+    String,
+    Number,
 
     And,
     Class,
@@ -49,66 +46,96 @@ enum TokenType {
     Var,
     While,
 
+    Eof,
+
     /// Indicates an error during lexing, including the error message.
     Error(String),
-
-    Eof,
 }
 
 /// A token produced by lexing a string of source code.
 #[derive(Debug, PartialEq)]
 pub struct Token {
     token_type: TokenType,
-    line_number: usize,
+    span: Range<usize>,
 }
 
 impl Token {
-    fn new(token_type: TokenType, line_number: usize) -> Self {
-        Token {
-            token_type,
-            line_number,
+    fn new(token_type: TokenType, span: Range<usize>) -> Self {
+        Token { token_type, span }
+    }
+
+    #[allow(dead_code)]
+    fn line_number(&self, source_code: &str) -> usize {
+        let mut newline_buffer = [0; 1];
+        '\n'.encode_utf8(&mut newline_buffer);
+        let newline_byte = newline_buffer[0];
+
+        let mut line_number = 1;
+        for (i, byte) in source_code.bytes().enumerate() {
+            if i == self.span.start {
+                return line_number;
+            } else if byte == newline_byte {
+                line_number += 1;
+            }
+        }
+
+        // EOF spans start past the end of the source code string.
+        if self.span.start == source_code.len() {
+            debug_assert_eq!(self.token_type, TokenType::Eof);
+            debug_assert_eq!(self.span.start, self.span.end);
+            line_number
+        } else {
+            panic!(
+                "Span ({}..{}) does not exist in the given string.",
+                self.span.start, self.span.end
+            );
         }
     }
 }
 
 /// An iterator over Lox tokens for a source code string.
 pub struct Lexer<'a> {
-    scanner: Peekable<Chars<'a>>,
-    current_line: usize,
+    source_code: &'a str,
+    scanner: Peekable<CharIndices<'a>>,
+    token_start_index: usize,
+    current_index: usize,
     emitted_eof: bool,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(source_code: &'a str) -> Self {
         Self {
-            scanner: source_code.chars().peekable(),
-            current_line: 1,
+            source_code,
+            scanner: source_code.char_indices().peekable(),
+            token_start_index: 0,
+            current_index: 0,
             emitted_eof: false,
         }
+    }
+
+    /// Get the source code string representing our current token span.
+    fn get_current_token_string(&self) -> &str {
+        &self.source_code[self.token_start_index..self.current_index]
     }
 
     /// Skip over whitespace and comments in the source code, incrementing our
     /// line counter on newlines.
     fn skip_whitespace(&mut self) {
         loop {
-            match self.scanner.peek() {
-                Some(' ') | Some('\r') | Some('\t') => {
-                    self.scanner.next();
-                }
-                Some('\n') => {
-                    self.current_line += 1;
-                    self.scanner.next();
+            match self.scanner_peek() {
+                Some(' ') | Some('\r') | Some('\n') | Some('\t') => {
+                    self.scanner_next();
                 }
                 Some('/') => match self.scanner_peek_next() {
                     // If there's a second slash, we're in a comment and should
                     // dump all of it. Otherwise we aren't on whitespace, so we
                     // should exit this function.
                     Some('/') => loop {
-                        let peeked = self.scanner.peek();
-                        if peeked.is_none() || peeked == Some(&'\n') {
+                        let peeked = self.scanner_peek();
+                        if peeked.is_none() || peeked == Some('\n') {
                             break;
                         }
-                        self.scanner.next();
+                        self.scanner_next();
                     },
                     _ => return,
                 },
@@ -117,163 +144,144 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Lex the next characters in the scanner into a string. The leading
+    /// Lex the next characters in the scanner as a string. The leading
     /// quotation mark is assumed to have already been consumed. An error token
     /// type is potentially returned.
     fn lex_string(&mut self) -> Token {
-        let mut s = String::new();
-
         loop {
-            match self.scanner.peek() {
+            match self.scanner_peek() {
                 None | Some('"') => break,
-                Some(c) => {
-                    if *c == '\n' {
-                        self.current_line += 1;
-                    }
-
-                    s.push(*c);
-                    self.scanner.next();
+                Some(_) => {
+                    self.scanner_next();
                 }
             }
         }
 
         // If we're at the end of the source, the string was unterminated.
-        if self.scanner.peek().is_none() {
-            return self.create_token(TokenType::Error(format!("Unterminated string '{}'.", s)));
+        if self.scanner_peek().is_none() {
+            return self.create_token(TokenType::Error("Unterminated string.".to_owned()));
         }
 
         // If we're here we must have encountered the closing quote, so eat it.
-        self.scanner.next();
+        self.scanner_next();
 
-        self.create_token(TokenType::String(s))
+        self.create_token(TokenType::String)
     }
 
-    /// Lex the next characters in the scanner into a string. Since the first
-    /// digit has already been consumed, pass that digit's character in.
-    fn lex_number(&mut self, first_digit: char) -> f64 {
-        let mut number_string = first_digit.to_string();
-
-        // Add any numbers before an optional decimal point.
-        self.add_digits_to_string(&mut number_string);
+    /// Lex the next characters in the scanner as a number. The first digit has
+    /// already been consumed, but since we're not actually constructing the
+    /// runtime value at the lexing stage we don't need to worry about that.
+    fn lex_number(&mut self) -> Token {
+        // Lex any numbers before an optional decimal point.
+        self.lex_digits();
 
         // Look for a decimal point. We do not allow decimal points at the end
         // of numbers, so we also require a digit to be after the decimal
         // point.
-        if self.scanner.peek() == Some(&'.')
+        if self.scanner_peek() == Some('.')
             && self
                 .scanner_peek_next()
                 .map_or(false, |c| c.is_ascii_digit())
         {
-            // Add the decimal point to the string.
-            number_string.push(self.scanner.next().unwrap());
+            // Eat the decimal point.
+            self.scanner_next();
 
-            // Add the fractional portion of the number to the string.
-            self.add_digits_to_string(&mut number_string);
+            // Lex the fractional portion of the number.
+            self.lex_digits();
         }
 
-        f64::from_str(&number_string).unwrap()
+        self.create_token(TokenType::Number)
     }
 
-    /// Lex the next characters in the scanner into an identifier. Since the
-    /// first character of the identifier has already been consumed, pass it in
-    /// to the function.
-    fn lex_identifier(&mut self, first_char: char) -> TokenType {
-        let mut identifier_string = first_char.to_string();
+    /// Lex the next characters in the scanner into an identifier. The first
+    /// character of the identifier has already been consumed, but since we're
+    /// not actually constructing the runtime value at the lexing stage we
+    /// don't need to worry about that.
+    fn lex_identifier(&mut self) -> Token {
         loop {
-            match self.scanner.peek() {
-                Some(c) if Self::is_identifier_character(*c) => {
-                    identifier_string.push(*c);
-                    self.scanner.next();
+            match self.scanner_peek() {
+                Some(c) if Self::is_identifier_character(c) => {
+                    self.scanner_next();
                 }
                 _ => break,
             }
         }
-        Self::token_type_from_identifier_string(identifier_string)
+
+        self.create_token(Self::token_type_from_identifier_string(
+            self.get_current_token_string(),
+        ))
     }
 
     /// Get the token type from an identifier string. This uses a trie-like
     /// technique to efficiently match any keywords one character at a time. If
     /// the identifier matches a keyword, we return that keyword's TokenType.
     /// Otherwise, we just return TokenType::Identifier.
-    fn token_type_from_identifier_string(s: String) -> TokenType {
+    fn token_type_from_identifier_string(s: &str) -> TokenType {
         let bytes = s.as_bytes();
         // We know that the identifier has at least one character, so its sound
         // to call get_unchecked here. We also know all keywords have only
         // ASCII characters, meaning checking individual bytes works.
         match unsafe { bytes.get_unchecked(0) } {
             /*a*/
-            97 => Self::maybe_lex_keyword(&s, &bytes[1..], "nd".as_bytes(), TokenType::And),
+            97 => Self::maybe_lex_keyword(&bytes[1..], "nd".as_bytes(), TokenType::And),
             /*c*/
-            99 => Self::maybe_lex_keyword(&s, &bytes[1..], "lass".as_bytes(), TokenType::Class),
+            99 => Self::maybe_lex_keyword(&bytes[1..], "lass".as_bytes(), TokenType::Class),
             /*e*/
-            101 => Self::maybe_lex_keyword(&s, &bytes[1..], "lse".as_bytes(), TokenType::Else),
+            101 => Self::maybe_lex_keyword(&bytes[1..], "lse".as_bytes(), TokenType::Else),
             /*f*/
             102 => {
                 if let Some(second_byte) = bytes.get(1) {
                     match second_byte {
                         /*a*/
-                        97 => Self::maybe_lex_keyword(
-                            &s,
-                            &bytes[2..],
-                            "lse".as_bytes(),
-                            TokenType::False,
-                        ),
+                        97 => {
+                            Self::maybe_lex_keyword(&bytes[2..], "lse".as_bytes(), TokenType::False)
+                        }
                         /*o*/
-                        111 => {
-                            Self::maybe_lex_keyword(&s, &bytes[2..], "r".as_bytes(), TokenType::For)
-                        }
+                        111 => Self::maybe_lex_keyword(&bytes[2..], "r".as_bytes(), TokenType::For),
                         /*u*/
-                        117 => {
-                            Self::maybe_lex_keyword(&s, &bytes[2..], "n".as_bytes(), TokenType::Fun)
-                        }
-                        _ => TokenType::Identifier(s),
+                        117 => Self::maybe_lex_keyword(&bytes[2..], "n".as_bytes(), TokenType::Fun),
+                        _ => TokenType::Identifier,
                     }
                 } else {
-                    TokenType::Identifier(s)
+                    TokenType::Identifier
                 }
             }
             /*i*/
-            105 => Self::maybe_lex_keyword(&s, &bytes[1..], "f".as_bytes(), TokenType::If),
+            105 => Self::maybe_lex_keyword(&bytes[1..], "f".as_bytes(), TokenType::If),
             /*n*/
-            110 => Self::maybe_lex_keyword(&s, &bytes[1..], "il".as_bytes(), TokenType::Nil),
+            110 => Self::maybe_lex_keyword(&bytes[1..], "il".as_bytes(), TokenType::Nil),
             /*o*/
-            111 => Self::maybe_lex_keyword(&s, &bytes[1..], "r".as_bytes(), TokenType::Or),
+            111 => Self::maybe_lex_keyword(&bytes[1..], "r".as_bytes(), TokenType::Or),
             /*p*/
-            112 => Self::maybe_lex_keyword(&s, &bytes[1..], "rint".as_bytes(), TokenType::Print),
+            112 => Self::maybe_lex_keyword(&bytes[1..], "rint".as_bytes(), TokenType::Print),
             /*r*/
-            114 => Self::maybe_lex_keyword(&s, &bytes[1..], "eturn".as_bytes(), TokenType::Return),
+            114 => Self::maybe_lex_keyword(&bytes[1..], "eturn".as_bytes(), TokenType::Return),
             /*s*/
-            115 => Self::maybe_lex_keyword(&s, &bytes[1..], "uper".as_bytes(), TokenType::Super),
+            115 => Self::maybe_lex_keyword(&bytes[1..], "uper".as_bytes(), TokenType::Super),
             /*t*/
             116 => {
                 if let Some(second_byte) = bytes.get(1) {
                     match second_byte {
                         /*h*/
-                        104 => Self::maybe_lex_keyword(
-                            &s,
-                            &bytes[2..],
-                            "is".as_bytes(),
-                            TokenType::This,
-                        ),
+                        104 => {
+                            Self::maybe_lex_keyword(&bytes[2..], "is".as_bytes(), TokenType::This)
+                        }
                         /*r*/
-                        114 => Self::maybe_lex_keyword(
-                            &s,
-                            &bytes[2..],
-                            "ue".as_bytes(),
-                            TokenType::True,
-                        ),
-                        _ => TokenType::Identifier(s),
+                        114 => {
+                            Self::maybe_lex_keyword(&bytes[2..], "ue".as_bytes(), TokenType::True)
+                        }
+                        _ => TokenType::Identifier,
                     }
                 } else {
-                    TokenType::Identifier(s)
+                    TokenType::Identifier
                 }
             }
             /*v*/
-            118 => Self::maybe_lex_keyword(&s, &bytes[1..], "ar".as_bytes(), TokenType::Var),
+            118 => Self::maybe_lex_keyword(&bytes[1..], "ar".as_bytes(), TokenType::Var),
             /*w*/
-            119 => Self::maybe_lex_keyword(&s, &bytes[1..], "hile".as_bytes(), TokenType::While),
+            119 => Self::maybe_lex_keyword(&bytes[1..], "hile".as_bytes(), TokenType::While),
 
-            _ => TokenType::Identifier(s),
+            _ => TokenType::Identifier,
         }
     }
 
@@ -283,7 +291,6 @@ impl<'a> Lexer<'a> {
     /// returned. If not, it's just a regular identifier and
     /// TokenType::Identifier is returned.
     fn maybe_lex_keyword(
-        identifier_string: &str,
         remaining_identifier: &[u8],
         bytes_to_match: &[u8],
         keyword_token_type: TokenType,
@@ -291,18 +298,17 @@ impl<'a> Lexer<'a> {
         if remaining_identifier == bytes_to_match {
             keyword_token_type
         } else {
-            TokenType::Identifier(identifier_string.to_owned())
+            TokenType::Identifier
         }
     }
 
-    /// Add digits in the scanner to the given string. This is used a couple
+    /// Scan through as long as we're at an ASCII digit. This is used a couple
     /// times to lex a number, one for each side of the decimal point.
-    fn add_digits_to_string(&mut self, s: &mut String) {
+    fn lex_digits(&mut self) {
         loop {
-            match self.scanner.peek() {
+            match self.scanner_peek() {
                 Some(c) if c.is_ascii_digit() => {
-                    s.push(*c);
-                    self.scanner.next();
+                    self.scanner_next();
                 }
                 _ => break,
             }
@@ -330,6 +336,34 @@ impl<'a> Lexer<'a> {
         Self::is_identifier_leading_character(c) || c.is_numeric()
     }
 
+    /// Return the next character from the scanner. We also update
+    /// self.current_index to point at the index of the next character in the
+    /// source string after this one was consumed.
+    fn scanner_next(&mut self) -> Option<char> {
+        let (_, c) = self.scanner.next()?;
+
+        // The current index needs to point at the index of the next character.
+        self.current_index = match self.scanner.peek() {
+            None => self.source_code.len(),
+            Some((index, _)) => *index,
+        };
+
+        Some(c)
+    }
+
+    fn scanner_next_if_eq(&mut self, expected_char: char) -> Option<char> {
+        if self.scanner_peek()? == expected_char {
+            self.scanner_next()
+        } else {
+            None
+        }
+    }
+
+    fn scanner_peek(&mut self) -> Option<char> {
+        let (_, c) = self.scanner.peek()?;
+        Some(*c)
+    }
+
     /// Peek one after next. This is done by cloning the scanner iterator and
     /// advancing it. Cloning is fairly cheap, and this function is needed
     /// rarely enough that caching the second peeked value doesn't seem
@@ -337,11 +371,12 @@ impl<'a> Lexer<'a> {
     fn scanner_peek_next(&self) -> Option<char> {
         let mut cloned = self.scanner.clone();
         cloned.next();
-        cloned.peek().cloned()
+        let (_, c) = cloned.next()?;
+        Some(c)
     }
 
     fn create_token(&self, token_type: TokenType) -> Token {
-        Token::new(token_type, self.current_line)
+        Token::new(token_type, self.token_start_index..self.current_index)
     }
 }
 
@@ -350,8 +385,9 @@ impl<'a> Iterator for Lexer<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.skip_whitespace();
+        self.token_start_index = self.current_index;
 
-        match self.scanner.next() {
+        match self.scanner_next() {
             None if !self.emitted_eof => {
                 self.emitted_eof = true;
                 Some(self.create_token(TokenType::Eof))
@@ -370,37 +406,31 @@ impl<'a> Iterator for Lexer<'a> {
             Some('/') => Some(self.create_token(TokenType::Slash)),
             Some('*') => Some(self.create_token(TokenType::Star)),
 
-            Some('!') => Some(if self.scanner.next_if_eq(&'=').is_some() {
+            Some('!') => Some(if self.scanner_next_if_eq('=').is_some() {
                 self.create_token(TokenType::BangEqual)
             } else {
                 self.create_token(TokenType::Bang)
             }),
-            Some('=') => Some(if self.scanner.next_if_eq(&'=').is_some() {
+            Some('=') => Some(if self.scanner_next_if_eq('=').is_some() {
                 self.create_token(TokenType::EqualEqual)
             } else {
                 self.create_token(TokenType::Equal)
             }),
-            Some('<') => Some(if self.scanner.next_if_eq(&'=').is_some() {
+            Some('<') => Some(if self.scanner_next_if_eq('=').is_some() {
                 self.create_token(TokenType::LessEqual)
             } else {
                 self.create_token(TokenType::Less)
             }),
-            Some('>') => Some(if self.scanner.next_if_eq(&'=').is_some() {
+            Some('>') => Some(if self.scanner_next_if_eq('=').is_some() {
                 self.create_token(TokenType::GreaterEqual)
             } else {
                 self.create_token(TokenType::Greater)
             }),
 
             Some('"') => Some(self.lex_string()),
-            Some(c) if c.is_ascii_digit() => {
-                let token_type = TokenType::Number(self.lex_number(c));
-                Some(self.create_token(token_type))
-            }
+            Some(c) if c.is_ascii_digit() => Some(self.lex_number()),
 
-            Some(c) if Self::is_identifier_leading_character(c) => {
-                let token_type = self.lex_identifier(c);
-                Some(self.create_token(token_type))
-            }
+            Some(c) if Self::is_identifier_leading_character(c) => Some(self.lex_identifier()),
 
             Some(c) => {
                 Some(self.create_token(TokenType::Error(format!("Unexpected character '{}'.", c))))
@@ -414,60 +444,15 @@ mod tests {
     use {
         super::*,
         rand::{distributions, Rng},
-        std::iter,
+        std::panic::catch_unwind,
     };
 
     fn run_lexer(source_string: &str) -> Vec<Token> {
         Lexer::new(source_string).collect()
     }
 
-    fn generate_token_string(token_type: &TokenType) -> String {
-        match token_type {
-            TokenType::LeftParen => "(".to_owned(),
-            TokenType::RightParen => ")".to_owned(),
-            TokenType::LeftBrace => "{".to_owned(),
-            TokenType::RightBrace => "}".to_owned(),
-            TokenType::Comma => ",".to_owned(),
-            TokenType::Dot => ".".to_owned(),
-            TokenType::Minus => "-".to_owned(),
-            TokenType::Plus => "+".to_owned(),
-            TokenType::Semicolon => ";".to_owned(),
-            TokenType::Slash => "/".to_owned(),
-            TokenType::Star => "*".to_owned(),
-            TokenType::Bang => "!".to_owned(),
-            TokenType::BangEqual => "!=".to_owned(),
-            TokenType::Equal => "=".to_owned(),
-            TokenType::EqualEqual => "==".to_owned(),
-            TokenType::Greater => ">".to_owned(),
-            TokenType::GreaterEqual => ">=".to_owned(),
-            TokenType::Less => "<".to_owned(),
-            TokenType::LessEqual => "<=".to_owned(),
-            TokenType::Identifier(s) => s.clone(),
-            TokenType::String(s) => format!("\"{}\"", s),
-            TokenType::Number(f) => f.to_string(),
-            TokenType::And => "and".to_owned(),
-            TokenType::Class => "class".to_owned(),
-            TokenType::Else => "else".to_owned(),
-            TokenType::False => "false".to_owned(),
-            TokenType::For => "for".to_owned(),
-            TokenType::Fun => "fun".to_owned(),
-            TokenType::If => "if".to_owned(),
-            TokenType::Nil => "nil".to_owned(),
-            TokenType::Or => "or".to_owned(),
-            TokenType::Print => "print".to_owned(),
-            TokenType::Return => "return".to_owned(),
-            TokenType::Super => "super".to_owned(),
-            TokenType::This => "this".to_owned(),
-            TokenType::True => "true".to_owned(),
-            TokenType::Var => "var".to_owned(),
-            TokenType::While => "while".to_owned(),
-            TokenType::Error(_) => unreachable!(),
-            TokenType::Eof => unreachable!(),
-        }
-    }
-
     fn create_random_whitespace(rng: &mut impl Rng) -> String {
-        let num_whitespace = rng.gen_range(1..30);
+        let num_whitespace = rng.gen_range(1..10);
         rng.sample_iter(&distributions::Slice::new(&[" ", "\r", "\t"]).unwrap())
             .take(num_whitespace)
             .cloned()
@@ -475,75 +460,71 @@ mod tests {
             .join("")
     }
 
-    fn add_whitespace_to_token_strings(
-        rng: &mut impl Rng,
-        token_strings: impl Iterator<Item = String>,
-    ) -> String {
-        let mut result_string = String::new();
-
-        result_string.push_str(&create_random_whitespace(rng));
-
-        for s in token_strings {
-            result_string.push_str(&s);
-            result_string.push_str(&create_random_whitespace(rng));
-        }
-
-        result_string
-    }
-
     fn create_random_source_line(
         rng: &mut impl Rng,
-        token_distribution: &distributions::Slice<TokenType>,
-    ) -> (Vec<TokenType>, String) {
-        let num_tokens = rng.gen_range(1..1000);
-        let token_types = rng
-            .sample_iter(token_distribution)
+        token_descriptor_distribution: &distributions::Slice<(&str, TokenType)>,
+        index: &mut usize,
+    ) -> (Vec<Token>, String) {
+        let num_tokens = rng.gen_range(1..30);
+        let token_descriptors = rng
+            .sample_iter(token_descriptor_distribution)
             .take(num_tokens)
-            .cloned()
             .collect::<Vec<_>>();
 
-        let token_string = add_whitespace_to_token_strings(
-            rng,
-            token_types.iter().map(|tt| generate_token_string(tt)),
-        );
+        let mut tokens = Vec::new();
+        let mut result_string = String::new();
 
-        (token_types, token_string)
+        let whitespace = create_random_whitespace(rng);
+        result_string.push_str(&whitespace);
+        *index += whitespace.len();
+
+        for (token_string, token_type) in token_descriptors {
+            tokens.push(Token::new(
+                token_type.clone(),
+                *index..*index + token_string.len(),
+            ));
+
+            result_string.push_str(token_string);
+            *index += token_string.len();
+
+            let whitespace = create_random_whitespace(rng);
+            result_string.push_str(&whitespace);
+            *index += whitespace.len();
+        }
+
+        (tokens, result_string)
     }
 
-    fn test_random_source(token_types: &[TokenType]) {
+    fn test_random_source(token_descriptors: &[(&str, TokenType)]) {
         let mut rng = rand::thread_rng();
-        let token_distribution = distributions::Slice::new(token_types).unwrap();
+        let token_descriptor_distribution = distributions::Slice::new(token_descriptors).unwrap();
 
-        for _ in 0..10 {
+        for _ in 0..100 {
             let mut expected_tokens = Vec::new();
+            let mut source_string = String::new();
+            let mut index = 0;
 
             let num_lines = rng.gen_range(1..5);
-            let mut lines = Vec::with_capacity(num_lines);
             for i in 0..num_lines {
-                let line_number = i + 1;
-                let (line_token_types, line_source) =
-                    create_random_source_line(&mut rng, &token_distribution);
+                if i != 0 {
+                    let line_separator = if rng.gen() { "\n" } else { "\r\n" };
+                    source_string.push_str(line_separator);
+                    index += line_separator.len();
+                }
 
-                expected_tokens.extend(
-                    line_token_types
-                        .into_iter()
-                        .map(|tt| Token::new(tt, line_number)),
-                );
-                lines.push(line_source);
+                let (line_tokens, line_source) =
+                    create_random_source_line(&mut rng, &token_descriptor_distribution, &mut index);
+                source_string.push_str(&line_source);
+
+                for token in &line_tokens {
+                    assert_eq!(token.line_number(&source_string), i + 1);
+                }
+
+                expected_tokens.extend(line_tokens);
             }
 
-            expected_tokens.push(Token::new(TokenType::Eof, num_lines));
+            expected_tokens.push(Token::new(TokenType::Eof, index..index));
 
-            let line_separator = if rng.gen() { "\n" } else { "\r\n" };
-            let source_string = lines.join(line_separator);
-
-            let output = run_lexer(&source_string);
-            if output != expected_tokens {
-                println!(
-                    "Running lexer on '{}', expecting {:?}.",
-                    source_string, expected_tokens
-                );
-            }
             assert_eq!(run_lexer(&source_string), expected_tokens);
         }
     }
@@ -552,23 +533,33 @@ mod tests {
         assert_eq!(
             run_lexer(source_string),
             vec![
-                Token::new(expected_token_type, 1),
-                Token::new(TokenType::Eof, 1)
+                Token::new(expected_token_type, 0..source_string.len()),
+                Token::new(TokenType::Eof, source_string.len()..source_string.len())
             ]
         );
     }
 
-    fn test_tokens(source_string: &str, expected_token_types: Vec<TokenType>) {
-        let expected_tokens = expected_token_types
-            .into_iter()
-            .map(|tt| Token::new(tt, 1))
-            .chain(iter::once(Token::new(TokenType::Eof, 1)))
-            .collect::<Vec<_>>();
+    fn test_tokens(source_string: &str, mut expected_tokens: Vec<Token>) {
+        expected_tokens.push(Token::new(
+            TokenType::Eof,
+            source_string.len()..source_string.len(),
+        ));
         assert_eq!(run_lexer(source_string), expected_tokens);
     }
 
     fn test_is_error(source_string: &str, error_string: &str) {
         test_single_token(source_string, TokenType::Error(error_string.to_owned()));
+    }
+
+    /// Test that the tokens from lexing the given source string have the given
+    /// sequence of line numbers. The last line number passed in should be for
+    /// the EOF token.
+    fn test_line_numbers(source_string: &str, expected_line_numbers: Vec<usize>) {
+        let actual_line_numbers = run_lexer(source_string)
+            .into_iter()
+            .map(|token| token.line_number(source_string))
+            .collect::<Vec<_>>();
+        assert_eq!(actual_line_numbers, expected_line_numbers);
     }
 
     #[test]
@@ -577,14 +568,11 @@ mod tests {
         test_tokens(" ", vec![]);
         test_tokens("\t", vec![]);
         test_tokens("\r", vec![]);
-        assert_eq!(run_lexer("\n"), vec![Token::new(TokenType::Eof, 2)]);
-        assert_eq!(run_lexer("\r\n"), vec![Token::new(TokenType::Eof, 2)]);
+        test_tokens("\n", vec![]);
+        test_tokens("\r\n", vec![]);
 
         test_tokens("       ", vec![]);
-        assert_eq!(
-            run_lexer("  \t\r  \n "),
-            vec![Token::new(TokenType::Eof, 2)]
-        );
+        test_tokens("  \t\r  \n ", vec![]);
     }
 
     #[test]
@@ -605,22 +593,17 @@ mod tests {
             ("=", TokenType::Equal),
             (">", TokenType::Greater),
             ("<", TokenType::Less),
-            ("a", TokenType::Identifier("a".to_owned())),
-            ("_", TokenType::Identifier("_".to_owned())),
-            ("京", TokenType::Identifier("京".to_owned())),
-            ("0", TokenType::Number(0.0)),
-            ("1", TokenType::Number(1.0)),
+            ("a", TokenType::Identifier),
+            ("_", TokenType::Identifier),
+            ("京", TokenType::Identifier),
+            ("0", TokenType::Number),
+            ("1", TokenType::Number),
         ];
 
         tests.iter().for_each(|(source_string, token_type)| {
             test_single_token(source_string, token_type.clone());
         });
-
-        let token_types = tests
-            .iter()
-            .map(|(_, token_type)| token_type.clone())
-            .collect::<Vec<_>>();
-        test_random_source(&token_types);
+        test_random_source(&tests);
     }
 
     #[test]
@@ -630,15 +613,12 @@ mod tests {
             ("==", TokenType::EqualEqual),
             (">=", TokenType::GreaterEqual),
             ("<=", TokenType::LessEqual),
-            ("_abc8902tt", TokenType::Identifier("_abc8902tt".to_owned())),
-            ("abc0123", TokenType::Identifier("abc0123".to_owned())),
-            ("京中7δ", TokenType::Identifier("京中7δ".to_owned())),
-            (
-                r#"" @ abcde-**f""#,
-                TokenType::String(" @ abcde-**f".to_owned()),
-            ),
-            ("1234", TokenType::Number(1234.0)),
-            ("8.72", TokenType::Number(8.72)),
+            ("_abc8902tt", TokenType::Identifier),
+            ("abc0123", TokenType::Identifier),
+            ("京中7δ", TokenType::Identifier),
+            (r#"" @ abcde-**f""#, TokenType::String),
+            ("1234", TokenType::Number),
+            ("8.72", TokenType::Number),
             ("and", TokenType::And),
             ("class", TokenType::Class),
             ("else", TokenType::Else),
@@ -660,76 +640,66 @@ mod tests {
         tests.iter().for_each(|(source_string, token_type)| {
             test_single_token(source_string, token_type.clone());
         });
-
-        let token_types = tests
-            .iter()
-            .map(|(_, token_type)| token_type.clone())
-            .collect::<Vec<_>>();
-        test_random_source(&token_types);
+        test_random_source(&tests);
     }
 
     #[test]
     fn identifiers() {
         let tests = [
-            ("a", TokenType::Identifier("a".to_owned())),
-            ("_", TokenType::Identifier("_".to_owned())),
-            ("a1", TokenType::Identifier("a1".to_owned())),
-            ("_1", TokenType::Identifier("_1".to_owned())),
-            ("abc0123", TokenType::Identifier("abc0123".to_owned())),
-            ("camelCase", TokenType::Identifier("camelCase".to_owned())),
-            (
-                "CapsCamelCase",
-                TokenType::Identifier("CapsCamelCase".to_owned()),
-            ),
-            ("snake_case", TokenType::Identifier("snake_case".to_owned())),
-            (
-                "LOUD_SNAKE_CASE",
-                TokenType::Identifier("LOUD_SNAKE_CASE".to_owned()),
-            ),
-            ("_京中7δ", TokenType::Identifier("_京中7δ".to_owned())),
-            ("_1", TokenType::Identifier("_1".to_owned())),
-            ("_1_", TokenType::Identifier("_1_".to_owned())),
-            ("a①", TokenType::Identifier("a①".to_owned())),
-            ("京৬", TokenType::Identifier("京৬".to_owned())),
+            ("a", TokenType::Identifier),
+            ("_", TokenType::Identifier),
+            ("a1", TokenType::Identifier),
+            ("_1", TokenType::Identifier),
+            ("abc0123", TokenType::Identifier),
+            ("camelCase", TokenType::Identifier),
+            ("CapsCamelCase", TokenType::Identifier),
+            ("snake_case", TokenType::Identifier),
+            ("LOUD_SNAKE_CASE", TokenType::Identifier),
+            ("_京中7δ", TokenType::Identifier),
+            ("_1", TokenType::Identifier),
+            ("_1_", TokenType::Identifier),
+            ("a①", TokenType::Identifier),
+            ("京৬", TokenType::Identifier),
         ];
 
         tests.iter().for_each(|(source_string, token_type)| {
             test_single_token(source_string, token_type.clone());
         });
-
-        let token_types = tests
-            .iter()
-            .map(|(_, token_type)| token_type.clone())
-            .collect::<Vec<_>>();
-        test_random_source(&token_types);
+        test_random_source(&tests);
 
         // Identifiers shouldn't start with numbers.
         test_tokens(
             "1o",
             vec![
-                TokenType::Number(1.0),
-                TokenType::Identifier("o".to_owned()),
+                Token::new(TokenType::Number, 0..1),
+                Token::new(TokenType::Identifier, 1..2),
             ],
         );
         test_tokens(
             "123.456abcdef",
             vec![
-                TokenType::Number(123.456),
-                TokenType::Identifier("abcdef".to_owned()),
+                Token::new(TokenType::Number, 0..7),
+                Token::new(TokenType::Identifier, 7..13),
             ],
         );
         test_tokens(
             "①o",
             vec![
-                TokenType::Error("Unexpected character '①'.".to_owned()),
-                TokenType::Identifier("o".to_owned()),
+                Token::new(
+                    TokenType::Error("Unexpected character '①'.".to_owned()),
+                    0..3,
+                ),
+                Token::new(TokenType::Identifier, 3..4),
             ],
         );
         test_tokens(
             "a\u{A0}",
             vec![
-                TokenType::Identifier("a".to_owned()),
-                TokenType::Error("Unexpected character '\u{A0}'.".to_owned()),
+                Token::new(TokenType::Identifier, 0..1),
+                Token::new(
+                    TokenType::Error("Unexpected character '\u{A0}'.".to_owned()),
+                    1..3,
+                ),
             ],
         );
         test_is_error("\u{A0}", "Unexpected character '\u{A0}'.");
@@ -738,79 +708,62 @@ mod tests {
     #[test]
     fn strings() {
         let tests = [
-            (r#""""#, TokenType::String("".to_owned())),
-            (r#""a""#, TokenType::String("a".to_owned())),
-            (r#""1""#, TokenType::String("1".to_owned())),
-            (r#""aaaaaa""#, TokenType::String("aaaaaa".to_owned())),
-            (r#""11111""#, TokenType::String("11111".to_owned())),
-            (
-                r#"" @ abcde-**f""#,
-                TokenType::String(" @ abcde-**f".to_owned()),
-            ),
-            (r#""京""#, TokenType::String("京".to_owned())),
+            (r#""""#, TokenType::String),
+            (r#""a""#, TokenType::String),
+            (r#""1""#, TokenType::String),
+            (r#""aaaaaa""#, TokenType::String),
+            (r#""11111""#, TokenType::String),
+            (r#"" @ abcde-**f""#, TokenType::String),
+            (r#""京""#, TokenType::String),
             // There are no escapes inside strings.
-            (r#""\""#, TokenType::String("\\".to_owned())),
-            (r#""\\""#, TokenType::String("\\\\".to_owned())),
-            (r#""\t""#, TokenType::String("\\t".to_owned())),
-            (r#""\n""#, TokenType::String("\\n".to_owned())),
-            (r#""\r""#, TokenType::String("\\r".to_owned())),
-            (r#""\a""#, TokenType::String("\\a".to_owned())),
+            (r#""\""#, TokenType::String),
+            (r#""\\""#, TokenType::String),
+            (r#""\t""#, TokenType::String),
+            (r#""\n""#, TokenType::String),
+            (r#""\r""#, TokenType::String),
+            (r#""\a""#, TokenType::String),
         ];
 
         tests.iter().for_each(|(source_string, token_type)| {
             test_single_token(source_string, token_type.clone());
         });
+        test_random_source(&tests);
 
-        let token_types = tests
-            .iter()
-            .map(|(_, token_type)| token_type.clone())
-            .collect::<Vec<_>>();
-        test_random_source(&token_types);
+        // Test multi-line strings.
+        test_single_token(
+            "\"this is the first line\nand this is the second line\"",
+            TokenType::String,
+        );
+        test_single_token(
+            "\"this is the first line with a space \n and this is the second line\"",
+            TokenType::String,
+        );
+        test_tokens(
+            "token1 \"line1\nline2\" token2",
+            vec![
+                Token::new(TokenType::Identifier, 0..6),
+                Token::new(TokenType::String, 7..20),
+                Token::new(TokenType::Identifier, 21..27),
+            ],
+        );
 
         test_is_error(
             r#""This is the beginning of a string"#,
-            "Unterminated string 'This is the beginning of a string'.",
+            "Unterminated string.",
         );
 
         test_tokens(
             r#"""""#,
             vec![
-                TokenType::String("".to_owned()),
-                TokenType::Error("Unterminated string ''.".to_owned()),
+                Token::new(TokenType::String, 0..2),
+                Token::new(TokenType::Error("Unterminated string.".to_owned()), 2..3),
             ],
         );
         test_tokens(
             r#""\"""#,
             vec![
-                TokenType::String("\\".to_owned()),
-                TokenType::Error("Unterminated string ''.".to_owned()),
-            ],
-        );
-
-        // Test multi-line string.
-        assert_eq!(
-            run_lexer("\"this is the first line\nand this is the second line\""),
-            vec![
-                Token::new(
-                    TokenType::String(
-                        "this is the first line\nand this is the second line".to_owned(),
-                    ),
-                    2
-                ),
-                Token::new(TokenType::Eof, 2)
-            ],
-        );
-        assert_eq!(
-            run_lexer("\"this is the first line with a space \n and this is the second line\""),
-            vec![
-                Token::new(
-                    TokenType::String(
-                        "this is the first line with a space \n and this is the second line"
-                            .to_owned(),
-                    ),
-                    2
-                ),
-                Token::new(TokenType::Eof, 2)
+                Token::new(TokenType::String, 0..3),
+                Token::new(TokenType::Error("Unterminated string.".to_owned()), 3..4),
             ],
         );
     }
@@ -818,62 +771,105 @@ mod tests {
     #[test]
     fn numbers() {
         let tests = [
-            ("0", TokenType::Number(0.0)),
-            ("0.0", TokenType::Number(0.0)),
-            ("0.0000", TokenType::Number(0.0)),
-            ("1", TokenType::Number(1.0)),
-            ("1.0", TokenType::Number(1.0)),
-            ("1.000", TokenType::Number(1.0)),
-            ("123456", TokenType::Number(123456.0)),
-            ("123456.0", TokenType::Number(123456.0)),
-            ("123456.789", TokenType::Number(123456.789)),
-            ("123456.7890", TokenType::Number(123456.789)),
-            ("123456.089", TokenType::Number(123456.089)),
-            ("123456.0890", TokenType::Number(123456.089)),
+            ("0", TokenType::Number),
+            ("0.0", TokenType::Number),
+            ("0.0000", TokenType::Number),
+            ("1", TokenType::Number),
+            ("1.0", TokenType::Number),
+            ("1.000", TokenType::Number),
+            ("123456", TokenType::Number),
+            ("123456.0", TokenType::Number),
+            ("123456.789", TokenType::Number),
+            ("123456.7890", TokenType::Number),
+            ("123456.089", TokenType::Number),
+            ("123456.0890", TokenType::Number),
         ];
 
         tests.iter().for_each(|(source_string, token_type)| {
             test_single_token(source_string, token_type.clone());
         });
+        test_random_source(&tests);
 
-        let token_types = tests
-            .iter()
-            .map(|(_, token_type)| token_type.clone())
-            .collect::<Vec<_>>();
-        test_random_source(&token_types);
+        test_tokens(
+            "1.",
+            vec![
+                Token::new(TokenType::Number, 0..1),
+                Token::new(TokenType::Dot, 1..2),
+            ],
+        );
+        test_tokens(
+            "1. ",
+            vec![
+                Token::new(TokenType::Number, 0..1),
+                Token::new(TokenType::Dot, 1..2),
+            ],
+        );
+        test_tokens(
+            "1234.",
+            vec![
+                Token::new(TokenType::Number, 0..4),
+                Token::new(TokenType::Dot, 4..5),
+            ],
+        );
+        test_tokens(
+            "1234. ",
+            vec![
+                Token::new(TokenType::Number, 0..4),
+                Token::new(TokenType::Dot, 4..5),
+            ],
+        );
 
-        test_tokens("1.", vec![TokenType::Number(1.0), TokenType::Dot]);
-        test_tokens("1. ", vec![TokenType::Number(1.0), TokenType::Dot]);
-        test_tokens("1234.", vec![TokenType::Number(1234.0), TokenType::Dot]);
-        test_tokens("1234. ", vec![TokenType::Number(1234.0), TokenType::Dot]);
-
-        test_tokens(".1", vec![TokenType::Dot, TokenType::Number(1.0)]);
-        test_tokens(" .1", vec![TokenType::Dot, TokenType::Number(1.0)]);
-        test_tokens(".1234", vec![TokenType::Dot, TokenType::Number(1234.0)]);
-        test_tokens(" .1234", vec![TokenType::Dot, TokenType::Number(1234.0)]);
+        test_tokens(
+            ".1",
+            vec![
+                Token::new(TokenType::Dot, 0..1),
+                Token::new(TokenType::Number, 1..2),
+            ],
+        );
+        test_tokens(
+            " .1",
+            vec![
+                Token::new(TokenType::Dot, 1..2),
+                Token::new(TokenType::Number, 2..3),
+            ],
+        );
+        test_tokens(
+            ".1234",
+            vec![
+                Token::new(TokenType::Dot, 0..1),
+                Token::new(TokenType::Number, 1..5),
+            ],
+        );
+        test_tokens(
+            " .1234",
+            vec![
+                Token::new(TokenType::Dot, 1..2),
+                Token::new(TokenType::Number, 2..6),
+            ],
+        );
 
         test_tokens(
             "1 . 2",
             vec![
-                TokenType::Number(1.0),
-                TokenType::Dot,
-                TokenType::Number(2.0),
+                Token::new(TokenType::Number, 0..1),
+                Token::new(TokenType::Dot, 2..3),
+                Token::new(TokenType::Number, 4..5),
             ],
         );
         test_tokens(
             "1. 2",
             vec![
-                TokenType::Number(1.0),
-                TokenType::Dot,
-                TokenType::Number(2.0),
+                Token::new(TokenType::Number, 0..1),
+                Token::new(TokenType::Dot, 1..2),
+                Token::new(TokenType::Number, 3..4),
             ],
         );
         test_tokens(
             "1 .2",
             vec![
-                TokenType::Number(1.0),
-                TokenType::Dot,
-                TokenType::Number(2.0),
+                Token::new(TokenType::Number, 0..1),
+                Token::new(TokenType::Dot, 2..3),
+                Token::new(TokenType::Number, 3..4),
             ],
         );
     }
@@ -899,24 +895,19 @@ mod tests {
             ("while", TokenType::While),
             // Test that variations on keywords such as changing capitalization
             // and adding and removing characters lex properly.
-            ("And", TokenType::Identifier("And".to_owned())),
-            ("clAss", TokenType::Identifier("clAss".to_owned())),
-            ("elsE", TokenType::Identifier("elsE".to_owned())),
-            ("fals", TokenType::Identifier("fals".to_owned())),
-            ("f", TokenType::Identifier("f".to_owned())),
-            ("fune", TokenType::Identifier("fune".to_owned())),
-            ("nl", TokenType::Identifier("nl".to_owned())),
+            ("And", TokenType::Identifier),
+            ("clAss", TokenType::Identifier),
+            ("elsE", TokenType::Identifier),
+            ("fals", TokenType::Identifier),
+            ("f", TokenType::Identifier),
+            ("fune", TokenType::Identifier),
+            ("nl", TokenType::Identifier),
         ];
 
         tests.iter().for_each(|(source_string, token_type)| {
             test_single_token(source_string, token_type.clone());
         });
-
-        let token_types = tests
-            .iter()
-            .map(|(_, token_type)| token_type.clone())
-            .collect::<Vec<_>>();
-        test_random_source(&token_types);
+        test_random_source(&tests);
     }
 
     #[test]
@@ -965,54 +956,45 @@ mod tests {
             (">=", TokenType::GreaterEqual),
             ("<", TokenType::Less),
             ("<=", TokenType::LessEqual),
-            ("a", TokenType::Identifier("a".to_owned())),
-            ("_", TokenType::Identifier("_".to_owned())),
-            ("a1", TokenType::Identifier("a1".to_owned())),
-            ("_1", TokenType::Identifier("_1".to_owned())),
-            ("abc0123", TokenType::Identifier("abc0123".to_owned())),
-            ("camelCase", TokenType::Identifier("camelCase".to_owned())),
-            (
-                "CapsCamelCase",
-                TokenType::Identifier("CapsCamelCase".to_owned()),
-            ),
-            ("snake_case", TokenType::Identifier("snake_case".to_owned())),
-            (
-                "LOUD_SNAKE_CASE",
-                TokenType::Identifier("LOUD_SNAKE_CASE".to_owned()),
-            ),
-            ("_京中7δ", TokenType::Identifier("_京中7δ".to_owned())),
-            ("_1", TokenType::Identifier("_1".to_owned())),
-            ("_1_", TokenType::Identifier("_1_".to_owned())),
-            ("a①", TokenType::Identifier("a①".to_owned())),
-            ("京৬", TokenType::Identifier("京৬".to_owned())),
-            (r#""""#, TokenType::String("".to_owned())),
-            (r#""a""#, TokenType::String("a".to_owned())),
-            (r#""1""#, TokenType::String("1".to_owned())),
-            (r#""aaaaaa""#, TokenType::String("aaaaaa".to_owned())),
-            (r#""11111""#, TokenType::String("11111".to_owned())),
-            (
-                r#"" @ abcde-**f""#,
-                TokenType::String(" @ abcde-**f".to_owned()),
-            ),
-            (r#""京""#, TokenType::String("京".to_owned())),
-            (r#""\""#, TokenType::String("\\".to_owned())),
-            (r#""\\""#, TokenType::String("\\\\".to_owned())),
-            (r#""\t""#, TokenType::String("\\t".to_owned())),
-            (r#""\n""#, TokenType::String("\\n".to_owned())),
-            (r#""\r""#, TokenType::String("\\r".to_owned())),
-            (r#""\a""#, TokenType::String("\\a".to_owned())),
-            ("0", TokenType::Number(0.0)),
-            ("0.0", TokenType::Number(0.0)),
-            ("0.0000", TokenType::Number(0.0)),
-            ("1", TokenType::Number(1.0)),
-            ("1.0", TokenType::Number(1.0)),
-            ("1.000", TokenType::Number(1.0)),
-            ("123456", TokenType::Number(123456.0)),
-            ("123456.0", TokenType::Number(123456.0)),
-            ("123456.789", TokenType::Number(123456.789)),
-            ("123456.7890", TokenType::Number(123456.789)),
-            ("123456.089", TokenType::Number(123456.089)),
-            ("123456.0890", TokenType::Number(123456.089)),
+            ("a", TokenType::Identifier),
+            ("_", TokenType::Identifier),
+            ("a1", TokenType::Identifier),
+            ("_1", TokenType::Identifier),
+            ("abc0123", TokenType::Identifier),
+            ("camelCase", TokenType::Identifier),
+            ("CapsCamelCase", TokenType::Identifier),
+            ("snake_case", TokenType::Identifier),
+            ("LOUD_SNAKE_CASE", TokenType::Identifier),
+            ("_京中7δ", TokenType::Identifier),
+            ("_1", TokenType::Identifier),
+            ("_1_", TokenType::Identifier),
+            ("a①", TokenType::Identifier),
+            ("京৬", TokenType::Identifier),
+            (r#""""#, TokenType::String),
+            (r#""a""#, TokenType::String),
+            (r#""1""#, TokenType::String),
+            (r#""aaaaaa""#, TokenType::String),
+            (r#""11111""#, TokenType::String),
+            (r#"" @ abcde-**f""#, TokenType::String),
+            (r#""京""#, TokenType::String),
+            (r#""\""#, TokenType::String),
+            (r#""\\""#, TokenType::String),
+            (r#""\t""#, TokenType::String),
+            (r#""\n""#, TokenType::String),
+            (r#""\r""#, TokenType::String),
+            (r#""\a""#, TokenType::String),
+            ("0", TokenType::Number),
+            ("0.0", TokenType::Number),
+            ("0.0000", TokenType::Number),
+            ("1", TokenType::Number),
+            ("1.0", TokenType::Number),
+            ("1.000", TokenType::Number),
+            ("123456", TokenType::Number),
+            ("123456.0", TokenType::Number),
+            ("123456.789", TokenType::Number),
+            ("123456.7890", TokenType::Number),
+            ("123456.089", TokenType::Number),
+            ("123456.0890", TokenType::Number),
             ("and", TokenType::And),
             ("class", TokenType::Class),
             ("else", TokenType::Else),
@@ -1034,76 +1016,148 @@ mod tests {
         tests.iter().for_each(|(source_string, token_type)| {
             test_single_token(source_string, token_type.clone());
         });
-
-        let token_types = tests
-            .iter()
-            .map(|(_, token_type)| token_type.clone())
-            .collect::<Vec<_>>();
-        test_random_source(&token_types);
+        test_random_source(&tests);
     }
 
     #[test]
     fn comments() {
-        assert_eq!(
-            run_lexer("//a comment without a space"),
-            vec![Token::new(TokenType::Eof, 1)]
+        test_tokens("//a comment without a space", vec![]);
+        test_tokens("// a comment with a space", vec![]);
+        test_tokens("// a comment with a 京 character", vec![]);
+        test_tokens(
+            "and\n// a comment ending the source",
+            vec![Token::new(TokenType::And, 0..3)],
         );
-        assert_eq!(
-            run_lexer("// a comment with a space"),
-            vec![Token::new(TokenType::Eof, 1)]
-        );
-        assert_eq!(
-            run_lexer("// a comment with a 京 character"),
-            vec![Token::new(TokenType::Eof, 1)]
-        );
-        assert_eq!(
-            run_lexer("and\n// a comment ending the source"),
-            vec![Token::new(TokenType::And, 1), Token::new(TokenType::Eof, 2)]
-        );
-        assert_eq!(
-            run_lexer("and\n// a comment\nor\n// another comment"),
+        test_tokens(
+            "and\n// a comment\nor\n// another comment",
             vec![
-                Token::new(TokenType::And, 1),
-                Token::new(TokenType::Or, 3),
-                Token::new(TokenType::Eof, 4)
-            ]
+                Token::new(TokenType::And, 0..3),
+                Token::new(TokenType::Or, 17..19),
+            ],
+        );
+
+        test_tokens(
+            "/ not a comment",
+            vec![
+                Token::new(TokenType::Slash, 0..1),
+                Token::new(TokenType::Identifier, 2..5),
+                Token::new(TokenType::Identifier, 6..7),
+                Token::new(TokenType::Identifier, 8..15),
+            ],
+        );
+        test_tokens(
+            " / not a comment",
+            vec![
+                Token::new(TokenType::Slash, 1..2),
+                Token::new(TokenType::Identifier, 3..6),
+                Token::new(TokenType::Identifier, 7..8),
+                Token::new(TokenType::Identifier, 9..16),
+            ],
+        );
+        test_tokens(
+            "/not a comment",
+            vec![
+                Token::new(TokenType::Slash, 0..1),
+                Token::new(TokenType::Identifier, 1..4),
+                Token::new(TokenType::Identifier, 5..6),
+                Token::new(TokenType::Identifier, 7..14),
+            ],
+        );
+        test_tokens(
+            " /not a comment",
+            vec![
+                Token::new(TokenType::Slash, 1..2),
+                Token::new(TokenType::Identifier, 2..5),
+                Token::new(TokenType::Identifier, 6..7),
+                Token::new(TokenType::Identifier, 8..15),
+            ],
         );
     }
 
     #[test]
     fn multiple_lines() {
-        assert_eq!(
-            run_lexer("first line\nsecond line\nthird line"),
+        test_tokens(
+            "first line\nsecond line\nthird line",
             vec![
-                Token::new(TokenType::Identifier("first".to_owned()), 1),
-                Token::new(TokenType::Identifier("line".to_owned()), 1),
-                Token::new(TokenType::Identifier("second".to_owned()), 2),
-                Token::new(TokenType::Identifier("line".to_owned()), 2),
-                Token::new(TokenType::Identifier("third".to_owned()), 3),
-                Token::new(TokenType::Identifier("line".to_owned()), 3),
-                Token::new(TokenType::Eof, 3),
-            ]
+                Token::new(TokenType::Identifier, 0..5),
+                Token::new(TokenType::Identifier, 6..10),
+                Token::new(TokenType::Identifier, 11..17),
+                Token::new(TokenType::Identifier, 18..22),
+                Token::new(TokenType::Identifier, 23..28),
+                Token::new(TokenType::Identifier, 29..33),
+            ],
+        );
+    }
+
+    #[test]
+    fn line_numbers() {
+        test_line_numbers("identifier", vec![1, 1]);
+        test_line_numbers(
+            "first line\nsecond line\nthird line",
+            vec![1, 1, 2, 2, 3, 3, 3],
+        );
+        test_line_numbers(
+            "first line\nsecond line\nthird line\n",
+            vec![1, 1, 2, 2, 3, 3, 4],
+        );
+
+        test_line_numbers("\"abc\"", vec![1, 1]);
+        test_line_numbers("\"abc\ndef\"", vec![1, 2]);
+        test_line_numbers("\n\"abc\ndef\"", vec![2, 3]);
+
+        test_line_numbers("token1\n// this is a comment\ntoken2", vec![1, 3, 3]);
+
+        test_line_numbers("token1 \n token2 \n", vec![1, 2, 3]);
+        test_line_numbers("token1 \n token2 \n ", vec![1, 2, 3]);
+
+        assert_eq!(
+            *catch_unwind(|| { Token::new(TokenType::LeftParen, 5..6).line_number("abc") })
+                .unwrap_err()
+                .downcast_ref::<String>()
+                .unwrap(),
+            "Span (5..6) does not exist in the given string.".to_owned(),
+        );
+        assert_eq!(
+            *catch_unwind(|| { Token::new(TokenType::LeftParen, 4..5).line_number("abc") })
+                .unwrap_err()
+                .downcast_ref::<String>()
+                .unwrap(),
+            "Span (4..5) does not exist in the given string.".to_owned(),
+        );
+        assert_eq!(
+            *catch_unwind(|| { Token::new(TokenType::Eof, 3..4).line_number("abc") })
+                .unwrap_err()
+                .downcast_ref::<String>()
+                .unwrap(),
+            "assertion failed: `(left == right)`\n  left: `3`,\n right: `4`".to_owned(),
+        );
+        assert_eq!(
+            *catch_unwind(|| { Token::new(TokenType::LeftParen, 3..3).line_number("abc") })
+                .unwrap_err()
+                .downcast_ref::<String>()
+                .unwrap(),
+            "assertion failed: `(left == right)`\n  left: `LeftParen`,\n right: `Eof`".to_owned(),
+        );
+        assert_eq!(
+            *catch_unwind(|| { Token::new(TokenType::LeftParen, 3..4).line_number("abc") })
+                .unwrap_err()
+                .downcast_ref::<String>()
+                .unwrap(),
+            "assertion failed: `(left == right)`\n  left: `LeftParen`,\n right: `Eof`".to_owned(),
         );
     }
 
     #[test]
     fn eof() {
-        assert_eq!(run_lexer("\n\n\n\n"), vec![Token::new(TokenType::Eof, 5)]);
-        assert_eq!(
-            run_lexer("\n\n\n\n// a comment"),
-            vec![Token::new(TokenType::Eof, 5)]
-        );
-        assert_eq!(
-            run_lexer("\n\n\n\n// a comment\n"),
-            vec![Token::new(TokenType::Eof, 6)]
-        );
+        test_tokens("\n\n\n\n", vec![]);
+        test_tokens("\n\n\n\n// a comment", vec![]);
+        test_tokens("\n\n\n\n// a comment\n", vec![]);
     }
 
     #[test]
     fn valid_lox_code() {
-        assert_eq!(
-            run_lexer(
-                r#"
+        test_tokens(
+            r#"
             var a = "this is a string";
             var b1 = 1;
             var b2 = 8.2;
@@ -1112,45 +1166,43 @@ mod tests {
                 print b1;
                 b1 = b1 + 1;
             }
-        "#
-            ),
+        "#,
             vec![
-                Token::new(TokenType::Var, 2),
-                Token::new(TokenType::Identifier("a".to_owned()), 2),
-                Token::new(TokenType::Equal, 2),
-                Token::new(TokenType::String("this is a string".to_owned()), 2),
-                Token::new(TokenType::Semicolon, 2),
-                Token::new(TokenType::Var, 3),
-                Token::new(TokenType::Identifier("b1".to_owned()), 3),
-                Token::new(TokenType::Equal, 3),
-                Token::new(TokenType::Number(1.0), 3),
-                Token::new(TokenType::Semicolon, 3),
-                Token::new(TokenType::Var, 4),
-                Token::new(TokenType::Identifier("b2".to_owned()), 4),
-                Token::new(TokenType::Equal, 4),
-                Token::new(TokenType::Number(8.2), 4),
-                Token::new(TokenType::Semicolon, 4),
-                Token::new(TokenType::While, 6),
-                Token::new(TokenType::LeftParen, 6),
-                Token::new(TokenType::Identifier("b1".to_owned()), 6),
-                Token::new(TokenType::Less, 6),
-                Token::new(TokenType::Number(10.0), 6),
-                Token::new(TokenType::And, 6),
-                Token::new(TokenType::False, 6),
-                Token::new(TokenType::RightParen, 6),
-                Token::new(TokenType::LeftBrace, 6),
-                Token::new(TokenType::Print, 7),
-                Token::new(TokenType::Identifier("b1".to_owned()), 7),
-                Token::new(TokenType::Semicolon, 7),
-                Token::new(TokenType::Identifier("b1".to_owned()), 8),
-                Token::new(TokenType::Equal, 8),
-                Token::new(TokenType::Identifier("b1".to_owned()), 8),
-                Token::new(TokenType::Plus, 8),
-                Token::new(TokenType::Number(1.0), 8),
-                Token::new(TokenType::Semicolon, 8),
-                Token::new(TokenType::RightBrace, 9),
-                Token::new(TokenType::Eof, 10),
-            ]
+                Token::new(TokenType::Var, 13..16),
+                Token::new(TokenType::Identifier, 17..18),
+                Token::new(TokenType::Equal, 19..20),
+                Token::new(TokenType::String, 21..39),
+                Token::new(TokenType::Semicolon, 39..40),
+                Token::new(TokenType::Var, 53..56),
+                Token::new(TokenType::Identifier, 57..59),
+                Token::new(TokenType::Equal, 60..61),
+                Token::new(TokenType::Number, 62..63),
+                Token::new(TokenType::Semicolon, 63..64),
+                Token::new(TokenType::Var, 77..80),
+                Token::new(TokenType::Identifier, 81..83),
+                Token::new(TokenType::Equal, 84..85),
+                Token::new(TokenType::Number, 86..89),
+                Token::new(TokenType::Semicolon, 89..90),
+                Token::new(TokenType::While, 145..150),
+                Token::new(TokenType::LeftParen, 151..152),
+                Token::new(TokenType::Identifier, 152..154),
+                Token::new(TokenType::Less, 155..156),
+                Token::new(TokenType::Number, 157..159),
+                Token::new(TokenType::And, 160..163),
+                Token::new(TokenType::False, 164..169),
+                Token::new(TokenType::RightParen, 169..170),
+                Token::new(TokenType::LeftBrace, 171..172),
+                Token::new(TokenType::Print, 189..194),
+                Token::new(TokenType::Identifier, 195..197),
+                Token::new(TokenType::Semicolon, 197..198),
+                Token::new(TokenType::Identifier, 215..217),
+                Token::new(TokenType::Equal, 218..219),
+                Token::new(TokenType::Identifier, 220..222),
+                Token::new(TokenType::Plus, 223..224),
+                Token::new(TokenType::Number, 225..226),
+                Token::new(TokenType::Semicolon, 226..227),
+                Token::new(TokenType::RightBrace, 240..241),
+            ],
         );
     }
 }

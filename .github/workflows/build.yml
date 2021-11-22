@@ -90,6 +90,9 @@ jobs:
     - name: Clippy
       run: cross clippy --target ${{ matrix.target }} --all-features -vv -- -D warnings
 
+    - name: Clippy tests
+      run: cross clippy --target ${{ matrix.target }} --all-features -vv --tests -- -D warnings
+
     - name: Test
       run: cross test --target ${{ matrix.target }} -vv
 

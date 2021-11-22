@@ -147,7 +147,7 @@ mod tests {
         stack.push(Value::new(69.420));
 
         assert_eq!(
-            stack.data.iter().take(3).collect::<Vec<&Option<Value>>>(),
+            stack.data.iter().take(3).collect::<Vec<_>>(),
             vec![&Some(Value::new(123.0)), &Some(Value::new(69.420)), &None]
         );
     }
@@ -161,7 +161,7 @@ mod tests {
         assert_eq!(stack.pop(), Value::new(69.420));
         assert_eq!(stack.pop(), Value::new(123.0));
 
-        assert_eq!(stack.data.iter().next(), Some(&None));
+        assert_eq!(stack.data.iter().take(1).collect::<Vec<_>>(), vec![&None]);
     }
 
     #[test]
