@@ -127,7 +127,7 @@
 
         <span class="macro">assert_eq!</span>(<span class="ident">value_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">Value::new</span>(<span class="number">1.0</span> <span class="op">/</span> <span class="number">0.0</span>)), <span class="string">&quot;inf&quot;</span>);
         <span class="macro">assert_eq!</span>(<span class="ident">value_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">Value::new</span>(<span class="op">-</span><span class="number">1.0</span> <span class="op">/</span> <span class="number">0.0</span>)), <span class="string">&quot;-inf&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">value_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">Value::new</span>(<span class="number">0.0</span> <span class="op">/</span> <span class="number">0.0</span>)), <span class="string">&quot;NaN&quot;</span>);
+        <span class="macro">assert_eq!</span>(<span class="ident">value_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">Value::new</span>(<span class="ident">f64::NAN</span>)), <span class="string">&quot;NaN&quot;</span>);
         <span class="macro">assert_eq!</span>(<span class="ident">value_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">Value::new</span>(<span class="op">-</span><span class="number">0.0</span> <span class="op">/</span> <span class="number">0.0</span>)), <span class="string">&quot;NaN&quot;</span>);
     }
 

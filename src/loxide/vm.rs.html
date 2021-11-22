@@ -356,7 +356,7 @@
         <span class="ident">stack</span>.<span class="ident">push</span>(<span class="ident">Value::new</span>(<span class="number">69.420</span>));
 
         <span class="macro">assert_eq!</span>(
-            <span class="ident">stack</span>.<span class="ident">data</span>.<span class="ident">iter</span>().<span class="ident">take</span>(<span class="number">3</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+            <span class="ident">stack</span>.<span class="ident">data</span>.<span class="ident">iter</span>().<span class="ident">take</span>(<span class="number">3</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
             <span class="macro">vec!</span>[<span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="ident">Value::new</span>(<span class="number">123.0</span>)), <span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="ident">Value::new</span>(<span class="number">69.420</span>)), <span class="kw-2">&amp;</span><span class="prelude-val">None</span>]
         );
     }
@@ -370,7 +370,7 @@
         <span class="macro">assert_eq!</span>(<span class="ident">stack</span>.<span class="ident">pop</span>(), <span class="ident">Value::new</span>(<span class="number">69.420</span>));
         <span class="macro">assert_eq!</span>(<span class="ident">stack</span>.<span class="ident">pop</span>(), <span class="ident">Value::new</span>(<span class="number">123.0</span>));
 
-        <span class="macro">assert_eq!</span>(<span class="ident">stack</span>.<span class="ident">data</span>.<span class="ident">iter</span>().<span class="ident">next</span>(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="prelude-val">None</span>));
+        <span class="macro">assert_eq!</span>(<span class="ident">stack</span>.<span class="ident">data</span>.<span class="ident">iter</span>().<span class="ident">take</span>(<span class="number">1</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(), <span class="macro">vec!</span>[<span class="kw-2">&amp;</span><span class="prelude-val">None</span>]);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
