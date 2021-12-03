@@ -40,111 +40,47 @@
 <span id="40">40</span>
 <span id="41">41</span>
 <span id="42">42</span>
-<span id="43">43</span>
-<span id="44">44</span>
-<span id="45">45</span>
-<span id="46">46</span>
-<span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
-<span id="53">53</span>
-<span id="54">54</span>
-<span id="55">55</span>
-<span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
-<span id="63">63</span>
-<span id="64">64</span>
-<span id="65">65</span>
-<span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
 </pre><pre class="rust"><code><span class="kw">mod</span> <span class="ident">chunk</span>;
+<span class="kw">mod</span> <span class="ident">compiler</span>;
 <span class="kw">mod</span> <span class="ident">debug</span>;
 <span class="kw">mod</span> <span class="ident">lexer</span>;
 <span class="kw">mod</span> <span class="ident">value</span>;
 <span class="kw">mod</span> <span class="ident">vm</span>;
 
-<span class="kw">use</span> {<span class="ident">chunk::Chunk</span>, <span class="ident">debug::disassemble_chunk</span>, <span class="ident">lexer::Lexer</span>, <span class="ident">value::Value</span>, <span class="ident">vm::Vm</span>};
+<span class="kw">use</span> {<span class="ident">chunk::Chunk</span>, <span class="ident">compiler::Compiler</span>, <span class="ident">debug::disassemble_chunk</span>, <span class="ident">lexer::Lexer</span>, <span class="ident">vm::Vm</span>};
 
 <span class="doccomment">/// A stand-in for a loxide error type.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LoxideError</span>;
 
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>()<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LoxideError</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="kw">_</span>: ()) -&gt; <span class="self">Self</span> {
+        <span class="ident">LoxideError</span>
+    }
+}
+
 <span class="doccomment">/// Compile the given source code into a bytecode representation. Errors</span>
 <span class="doccomment">/// indicate compilation errors.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile</span>(<span class="ident">source_code</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span>, <span class="ident">LoxideError</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile</span>(<span class="ident">source_code</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Chunk</span>, <span class="ident">LoxideError</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">lexer</span> <span class="op">=</span> <span class="ident">Lexer::new</span>(<span class="ident">source_code</span>);
-    <span class="kw">for</span> <span class="ident">token</span> <span class="kw">in</span> <span class="ident">lexer</span> {
-        <span class="macro">println!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">token</span>);
-    }
 
-    <span class="comment">// If we want to look at the compiled bytecode without executing it, we do</span>
-    <span class="comment">// that here.</span>
-    <span class="comment">// if cfg!(feature = &quot;debug_dump_disassembly&quot;) {</span>
-    <span class="comment">// disassemble_chunk(&amp;chunk, &quot;test chunk&quot;);</span>
-    <span class="comment">// return;</span>
-    <span class="comment">// }</span>
-
-    <span class="prelude-val">Ok</span>(<span class="number">0</span>)
-}
-
-<span class="doccomment">/// Execute the given bytecode. Errors indicate runtime errors.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute</span>(<span class="ident">_bytecode</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">LoxideError</span><span class="op">&gt;</span> {
-    <span class="prelude-val">Ok</span>(())
-    <span class="comment">// let mut vm = Vm::new(&amp;chunk);</span>
-    <span class="comment">// vm.interpret()?;</span>
-}
-
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test</span>() {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">chunk</span> <span class="op">=</span> <span class="ident">Chunk::new</span>();
-
-    <span class="kw">let</span> <span class="ident">constant_index</span> <span class="op">=</span> <span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">Value::new</span>(<span class="number">1.2</span>));
-    <span class="ident">chunk</span>.<span class="ident">add_constant_instruction</span>(<span class="ident">constant_index</span>, <span class="number">123</span>);
-
-    <span class="kw">let</span> <span class="ident">constant_index</span> <span class="op">=</span> <span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">Value::new</span>(<span class="number">3.4</span>));
-    <span class="ident">chunk</span>.<span class="ident">add_constant_instruction</span>(<span class="ident">constant_index</span>, <span class="number">123</span>);
-
-    <span class="ident">chunk</span>.<span class="ident">add_add_instruction</span>(<span class="number">123</span>);
-
-    <span class="kw">let</span> <span class="ident">constant_index</span> <span class="op">=</span> <span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">Value::new</span>(<span class="number">5.6</span>));
-    <span class="ident">chunk</span>.<span class="ident">add_constant_instruction</span>(<span class="ident">constant_index</span>, <span class="number">123</span>);
-
-    <span class="ident">chunk</span>.<span class="ident">add_divide_instruction</span>(<span class="number">123</span>);
-    <span class="ident">chunk</span>.<span class="ident">add_negate_instruction</span>(<span class="number">123</span>);
-
-    <span class="kw">let</span> <span class="ident">constant_index</span> <span class="op">=</span> <span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">Value::new</span>(<span class="number">3.4</span>));
-    <span class="ident">chunk</span>.<span class="ident">add_constant_instruction</span>(<span class="ident">constant_index</span>, <span class="number">123</span>);
-
-    <span class="kw">let</span> <span class="ident">constant_index</span> <span class="op">=</span> <span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">Value::new</span>(<span class="number">3.5</span>));
-    <span class="ident">chunk</span>.<span class="ident">add_constant_instruction</span>(<span class="ident">constant_index</span>, <span class="number">123</span>);
-
-    <span class="ident">chunk</span>.<span class="ident">add_multiply_instruction</span>(<span class="number">123</span>);
-    <span class="ident">chunk</span>.<span class="ident">add_subtract_instruction</span>(<span class="number">123</span>);
-
-    <span class="ident">chunk</span>.<span class="ident">add_return_instruction</span>(<span class="number">123</span>);
+    <span class="kw">let</span> <span class="ident">chunk</span> <span class="op">=</span> <span class="ident">Compiler::new</span>(<span class="ident">lexer</span>).<span class="ident">compile</span>()<span class="question-mark">?</span>;
 
     <span class="comment">// If we want to look at the compiled bytecode without executing it, we do</span>
     <span class="comment">// that here.</span>
     <span class="kw">if</span> <span class="macro">cfg!</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;debug_dump_disassembly&quot;</span>) {
-        <span class="ident">disassemble_chunk</span>(<span class="kw-2">&amp;</span><span class="ident">chunk</span>, <span class="string">&quot;test chunk&quot;</span>);
-        <span class="kw">return</span>;
+        <span class="ident">disassemble_chunk</span>(<span class="kw-2">&amp;</span><span class="ident">chunk</span>, <span class="string">&quot;[top level]&quot;</span>);
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">LoxideError</span>);
     }
 
+    <span class="prelude-val">Ok</span>(<span class="ident">chunk</span>)
+}
+
+<span class="doccomment">/// Execute the given bytecode. Errors indicate runtime errors.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute</span>(<span class="ident">chunk</span>: <span class="ident">Chunk</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">LoxideError</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">vm</span> <span class="op">=</span> <span class="ident">Vm::new</span>(<span class="kw-2">&amp;</span><span class="ident">chunk</span>);
-    <span class="ident">vm</span>.<span class="ident">interpret</span>().<span class="ident">unwrap</span>();
+    <span class="ident">vm</span>.<span class="ident">interpret</span>()<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="loxide" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
