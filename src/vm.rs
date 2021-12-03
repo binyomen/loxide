@@ -59,6 +59,15 @@ impl ValueStack {
         }
         println!();
     }
+
+    #[cfg(test)]
+    fn to_vec(&self) -> Vec<Value> {
+        self.data
+            .iter()
+            .take(self.index)
+            .map(|o| o.clone().unwrap())
+            .collect()
+    }
 }
 
 /// The actual virtual machine that executes Lox bytecode.
@@ -66,6 +75,9 @@ pub struct Vm<'a> {
     chunk: &'a Chunk,
     cursor: ChunkCursor<'a>,
     stack: ValueStack,
+
+    #[cfg(test)]
+    test_stacks: Vec<Vec<Value>>,
 }
 
 impl<'a> Vm<'a> {
@@ -74,11 +86,14 @@ impl<'a> Vm<'a> {
             chunk,
             cursor: chunk.cursor(),
             stack: ValueStack::new(),
+
+            #[cfg(test)]
+            test_stacks: Vec::new(),
         }
     }
 
     pub fn interpret(&mut self) -> Result<(), ()> {
-        loop {
+        let result = loop {
             #[cfg(feature = "debug_trace_execution")]
             let offset = self.cursor.offset();
 
@@ -115,10 +130,18 @@ impl<'a> Vm<'a> {
                 }
                 Instruction::Return => {
                     println!("{}", value_to_string(&self.stack.pop()));
-                    return Ok(());
+                    break Ok(());
                 }
             }
-        }
+
+            #[cfg(test)]
+            self.test_stacks.push(self.stack.to_vec());
+        };
+
+        #[cfg(test)]
+        self.test_stacks.push(self.stack.to_vec());
+
+        result
     }
 
     fn execute_binary_operation(&mut self, op: impl FnOnce(&Value, Value) -> Value) {

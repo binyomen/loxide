@@ -464,6 +464,19 @@ fn compile_groupings() {
         [1; 2],
     );
     test_compilation(
+        "((0))",
+        [Instruction::Constant(0), Instruction::Return],
+        [Value::new(0.0)],
+        [1; 2],
+    );
+    test_compilation(
+        "(((0)))",
+        [Instruction::Constant(0), Instruction::Return],
+        [Value::new(0.0)],
+        [1; 2],
+    );
+
+    test_compilation(
         "(0 + 1 * 2)",
         [
             Instruction::Constant(0),
