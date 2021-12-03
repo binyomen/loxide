@@ -1,9 +1,10 @@
 //! Utilities for dealing with chunks of bytecode.
 
+#[cfg(debug_assertions)]
+use strum::EnumCount;
 use {
     crate::value::Value,
     std::mem::transmute,
-    strum::EnumCount,
     strum_macros::{EnumCount, EnumIter},
 };
 
@@ -111,15 +112,25 @@ impl Chunk {
     /// constant in the chunk's constant list so that other instructions can
     /// refer to it.
     ///
-    /// Chunks can currently only store up to 256 constants.
-    pub fn add_constant(&mut self, constant: Value) -> u8 {
-        debug_assert!(self.constants.len() < Into::<usize>::into(u8::MAX) + 1);
-        self.constants.push(constant);
-        (self.constants.len() - 1) as u8
+    /// Chunks can currently only store up to 256 constants. None is returned
+    /// if we've increased beyond the max.
+    pub fn add_constant(&mut self, constant: Value) -> Option<u8> {
+        if self.constants.len() > Into::<usize>::into(u8::MAX) {
+            None
+        } else {
+            self.constants.push(constant);
+            Some((self.constants.len() - 1) as u8)
+        }
     }
 
     pub fn get_constant(&self, index: u8) -> &Value {
         &self.constants[Into::<usize>::into(index)]
+    }
+
+    /// This function shouldn't be needed in actual code, but is handy in tests.
+    #[cfg(test)]
+    pub fn constants(&self) -> Vec<Value> {
+        self.constants.clone()
     }
 
     pub fn cursor(&self) -> ChunkCursor {
@@ -263,8 +274,8 @@ mod tests {
     #[test]
     fn chunk_can_add_constant() {
         let mut chunk = Chunk::new();
-        assert_eq!(chunk.add_constant(Value::new(1.2)), 0);
-        assert_eq!(chunk.add_constant(Value::new(500.3928)), 1);
+        assert_eq!(chunk.add_constant(Value::new(1.2)), Some(0));
+        assert_eq!(chunk.add_constant(Value::new(500.3928)), Some(1));
         assert_eq!(chunk.constants.len(), 2);
 
         assert_eq!(chunk.get_constant(0), &Value::new(1.2));
@@ -275,7 +286,7 @@ mod tests {
     fn chunk_can_add_up_to_256_constants() {
         let mut chunk = Chunk::new();
         for i in 0..256 {
-            assert_eq!(chunk.add_constant(Value::new(i as f64)), i as u8)
+            assert_eq!(chunk.add_constant(Value::new(i as f64)), Some(i as u8));
         }
     }
 
@@ -283,18 +294,10 @@ mod tests {
     fn chunk_cannot_add_more_than_256_constants() {
         let mut chunk = Chunk::new();
         for i in 0..256 {
-            assert_eq!(chunk.add_constant(Value::new(i as f64)), i as u8)
+            assert_eq!(chunk.add_constant(Value::new(i as f64)), Some(i as u8));
         }
 
-        assert_eq!(
-            *catch_unwind(move || {
-                chunk.add_constant(Value::new(256.0));
-            })
-            .unwrap_err()
-            .downcast_ref::<&str>()
-            .unwrap(),
-            "assertion failed: self.constants.len() < Into::<usize>::into(u8::MAX) + 1"
-        );
+        assert_eq!(chunk.add_constant(Value::new(256.0)), None);
     }
 
     #[test]

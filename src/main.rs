@@ -47,8 +47,8 @@ fn run_repl() -> Result<(), NonZeroI32> {
             break;
         }
 
-        if let Ok(bytecode) = compile(&line) {
-            let _ = execute(bytecode);
+        if let Ok(chunk) = compile(&line) {
+            let _ = execute(chunk);
         }
     }
 
@@ -67,8 +67,8 @@ fn run_file(path: impl AsRef<Path> + Display) -> Result<(), NonZeroI32> {
         EXIT_CODE_74
     })?;
 
-    let bytecode = compile(&source_code).map_err(|_| EXIT_CODE_65)?;
-    execute(bytecode).map_err(|_| EXIT_CODE_70)?;
+    let chunk = compile(&source_code).map_err(|_| EXIT_CODE_65)?;
+    execute(chunk).map_err(|_| EXIT_CODE_70)?;
 
     Ok(())
 }

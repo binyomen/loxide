@@ -1,9 +1,11 @@
+//! Utilities for lexing source code into tokens.
+
 use std::{iter::Peekable, ops::Range, str::CharIndices};
 
 /// The type of a given token, with additional information included for tokens
 /// that need it.
-#[derive(Clone, Debug, PartialEq)]
-enum TokenType {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum TokenType {
     LeftParen,
     RightParen,
     LeftBrace,
@@ -53,19 +55,18 @@ enum TokenType {
 }
 
 /// A token produced by lexing a string of source code.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Token {
-    token_type: TokenType,
+    pub token_type: TokenType,
     span: Range<usize>,
 }
 
 impl Token {
-    fn new(token_type: TokenType, span: Range<usize>) -> Self {
+    pub fn new(token_type: TokenType, span: Range<usize>) -> Self {
         Token { token_type, span }
     }
 
-    #[allow(dead_code)]
-    fn line_number(&self, source_code: &str) -> usize {
+    pub fn line_number(&self, source_code: &str) -> usize {
         let mut newline_buffer = [0; 1];
         '\n'.encode_utf8(&mut newline_buffer);
         let newline_byte = newline_buffer[0];
@@ -91,6 +92,10 @@ impl Token {
             );
         }
     }
+
+    pub fn token_string<'c>(&self, source_code: &'c str) -> &'c str {
+        &source_code[self.span.clone()]
+    }
 }
 
 /// An iterator over Lox tokens for a source code string.
@@ -113,8 +118,12 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    pub fn source_code(&self) -> &str {
+        self.source_code
+    }
+
     /// Get the source code string representing our current token span.
-    fn get_current_token_string(&self) -> &str {
+    fn current_token_string(&self) -> &str {
         &self.source_code[self.token_start_index..self.current_index]
     }
 
@@ -208,7 +217,7 @@ impl<'a> Lexer<'a> {
         }
 
         self.create_token(Self::token_type_from_identifier_string(
-            self.get_current_token_string(),
+            self.current_token_string(),
         ))
     }
 
@@ -1144,6 +1153,18 @@ mod tests {
                 .downcast_ref::<String>()
                 .unwrap(),
             "assertion failed: `(left == right)`\n  left: `LeftParen`,\n right: `Eof`".to_owned(),
+        );
+    }
+
+    #[test]
+    fn token_string() {
+        assert_eq!(
+            Token::new(TokenType::LeftParen, 0..3).token_string("abc"),
+            "abc"
+        );
+        assert_eq!(
+            Token::new(TokenType::LeftParen, 7..10).token_string("before abc after"),
+            "abc"
         );
     }
 

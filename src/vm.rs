@@ -1,3 +1,5 @@
+//! The virtual machine which runs the compiled bytecode.
+
 #[cfg(feature = "debug_trace_execution")]
 use crate::debug::disassemble_instruction;
 use crate::{
@@ -131,7 +133,7 @@ mod tests {
     fn simple_chunk_doesnt_produce_an_error() {
         let mut chunk = Chunk::new();
 
-        let constant_index = chunk.add_constant(Value::new(1.2));
+        let constant_index = chunk.add_constant(Value::new(1.2)).unwrap();
         chunk.add_constant_instruction(constant_index, 123);
 
         chunk.add_return_instruction(123);
