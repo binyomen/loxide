@@ -787,6 +787,29 @@ fn compile_multiple_lines() {
 }
 
 #[test]
+fn mismatched_types() {
+    test_compilation(
+        "-true",
+        [Instruction::True, Instruction::Negate, Instruction::Return],
+        [],
+        [1; 3],
+    );
+    test_compilation(
+        "0 + nil * false",
+        [
+            Instruction::Constant(0),
+            Instruction::Nil,
+            Instruction::False,
+            Instruction::Multiply,
+            Instruction::Add,
+            Instruction::Return,
+        ],
+        [vn(0.0)],
+        [1; 6],
+    );
+}
+
+#[test]
 fn too_many_constants() {
     {
         let mut constants = Vec::with_capacity(255);
