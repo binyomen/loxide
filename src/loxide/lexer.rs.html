@@ -436,20 +436,6 @@
 <span id="436">436</span>
 <span id="437">437</span>
 <span id="438">438</span>
-<span id="439">439</span>
-<span id="440">440</span>
-<span id="441">441</span>
-<span id="442">442</span>
-<span id="443">443</span>
-<span id="444">444</span>
-<span id="445">445</span>
-<span id="446">446</span>
-<span id="447">447</span>
-<span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
-<span id="451">451</span>
-<span id="452">452</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Utilities for lexing source code into tokens.</span>
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
@@ -686,52 +672,40 @@
         <span class="comment">// to call get_unchecked here. We also know all keywords have only</span>
         <span class="comment">// ASCII characters, meaning checking individual bytes works.</span>
         <span class="kw">match</span> <span class="kw">unsafe</span> { <span class="ident">bytes</span>.<span class="ident">get_unchecked</span>(<span class="number">0</span>) } {
-            <span class="comment">/*a*/</span>
-            <span class="number">97</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;nd&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::And</span>),
-            <span class="comment">/*c*/</span>
-            <span class="number">99</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;lass&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Class</span>),
-            <span class="comment">/*e*/</span>
-            <span class="number">101</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;lse&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Else</span>),
-            <span class="comment">/*f*/</span>
-            <span class="number">102</span> =&gt; {
+            <span class="string">b&#39;a&#39;</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;nd&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::And</span>),
+            <span class="string">b&#39;c&#39;</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;lass&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Class</span>),
+            <span class="string">b&#39;e&#39;</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;lse&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Else</span>),
+            <span class="string">b&#39;f&#39;</span> =&gt; {
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">second_byte</span>) <span class="op">=</span> <span class="ident">bytes</span>.<span class="ident">get</span>(<span class="number">1</span>) {
                     <span class="kw">match</span> <span class="ident">second_byte</span> {
-                        <span class="comment">/*a*/</span>
-                        <span class="number">97</span> =&gt; {
+                        <span class="string">b&#39;a&#39;</span> =&gt; {
                             <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">2</span>..], <span class="string">&quot;lse&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::False</span>)
                         }
-                        <span class="comment">/*o*/</span>
-                        <span class="number">111</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">2</span>..], <span class="string">&quot;r&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::For</span>),
-                        <span class="comment">/*u*/</span>
-                        <span class="number">117</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">2</span>..], <span class="string">&quot;n&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Fun</span>),
+                        <span class="string">b&#39;o&#39;</span> =&gt; {
+                            <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">2</span>..], <span class="string">&quot;r&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::For</span>)
+                        }
+                        <span class="string">b&#39;u&#39;</span> =&gt; {
+                            <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">2</span>..], <span class="string">&quot;n&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Fun</span>)
+                        }
                         <span class="kw">_</span> =&gt; <span class="ident">TokenType::Identifier</span>,
                     }
                 } <span class="kw">else</span> {
                     <span class="ident">TokenType::Identifier</span>
                 }
             }
-            <span class="comment">/*i*/</span>
-            <span class="number">105</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;f&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::If</span>),
-            <span class="comment">/*n*/</span>
-            <span class="number">110</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;il&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Nil</span>),
-            <span class="comment">/*o*/</span>
-            <span class="number">111</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;r&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Or</span>),
-            <span class="comment">/*p*/</span>
-            <span class="number">112</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;rint&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Print</span>),
-            <span class="comment">/*r*/</span>
-            <span class="number">114</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;eturn&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Return</span>),
-            <span class="comment">/*s*/</span>
-            <span class="number">115</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;uper&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Super</span>),
-            <span class="comment">/*t*/</span>
-            <span class="number">116</span> =&gt; {
+            <span class="string">b&#39;i&#39;</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;f&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::If</span>),
+            <span class="string">b&#39;n&#39;</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;il&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Nil</span>),
+            <span class="string">b&#39;o&#39;</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;r&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Or</span>),
+            <span class="string">b&#39;p&#39;</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;rint&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Print</span>),
+            <span class="string">b&#39;r&#39;</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;eturn&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Return</span>),
+            <span class="string">b&#39;s&#39;</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;uper&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Super</span>),
+            <span class="string">b&#39;t&#39;</span> =&gt; {
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">second_byte</span>) <span class="op">=</span> <span class="ident">bytes</span>.<span class="ident">get</span>(<span class="number">1</span>) {
                     <span class="kw">match</span> <span class="ident">second_byte</span> {
-                        <span class="comment">/*h*/</span>
-                        <span class="number">104</span> =&gt; {
+                        <span class="string">b&#39;h&#39;</span> =&gt; {
                             <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">2</span>..], <span class="string">&quot;is&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::This</span>)
                         }
-                        <span class="comment">/*r*/</span>
-                        <span class="number">114</span> =&gt; {
+                        <span class="string">b&#39;r&#39;</span> =&gt; {
                             <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">2</span>..], <span class="string">&quot;ue&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::True</span>)
                         }
                         <span class="kw">_</span> =&gt; <span class="ident">TokenType::Identifier</span>,
@@ -740,10 +714,8 @@
                     <span class="ident">TokenType::Identifier</span>
                 }
             }
-            <span class="comment">/*v*/</span>
-            <span class="number">118</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;ar&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Var</span>),
-            <span class="comment">/*w*/</span>
-            <span class="number">119</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;hile&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::While</span>),
+            <span class="string">b&#39;v&#39;</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;ar&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::Var</span>),
+            <span class="string">b&#39;w&#39;</span> =&gt; <span class="ident"><span class="self">Self</span>::maybe_lex_keyword</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>[<span class="number">1</span>..], <span class="string">&quot;hile&quot;</span>.<span class="ident">as_bytes</span>(), <span class="ident">TokenType::While</span>),
 
             <span class="kw">_</span> =&gt; <span class="ident">TokenType::Identifier</span>,
         }
