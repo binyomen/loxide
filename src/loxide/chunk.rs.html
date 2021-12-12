@@ -376,6 +376,13 @@
 <span id="376">376</span>
 <span id="377">377</span>
 <span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Utilities for dealing with chunks of bytecode.</span>
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">debug_assertions</span>)]</span>
@@ -409,6 +416,7 @@
     <span class="ident">Subtract</span>,
     <span class="ident">Multiply</span>,
     <span class="ident">Divide</span>,
+    <span class="ident">Not</span>,
     <span class="ident">Negate</span>,
     <span class="ident">Return</span>,
 }
@@ -443,6 +451,7 @@
     <span class="ident">Subtract</span>,
     <span class="ident">Multiply</span>,
     <span class="ident">Divide</span>,
+    <span class="ident">Not</span>,
     <span class="ident">Negate</span>,
     <span class="ident">Return</span>,
 }
@@ -498,6 +507,10 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_divide_instruction</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">line_number</span>: <span class="ident">usize</span>) {
         <span class="self">self</span>.<span class="ident">add_byte</span>(<span class="ident">OpCode::Divide</span>.<span class="ident">as_byte</span>(), <span class="ident">line_number</span>);
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_not_instruction</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">line_number</span>: <span class="ident">usize</span>) {
+        <span class="self">self</span>.<span class="ident">add_byte</span>(<span class="ident">OpCode::Not</span>.<span class="ident">as_byte</span>(), <span class="ident">line_number</span>);
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_negate_instruction</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">line_number</span>: <span class="ident">usize</span>) {
@@ -582,6 +595,7 @@
                 <span class="ident">OpCode::Subtract</span> =&gt; <span class="prelude-val">Some</span>(<span class="ident">Instruction::Subtract</span>),
                 <span class="ident">OpCode::Multiply</span> =&gt; <span class="prelude-val">Some</span>(<span class="ident">Instruction::Multiply</span>),
                 <span class="ident">OpCode::Divide</span> =&gt; <span class="prelude-val">Some</span>(<span class="ident">Instruction::Divide</span>),
+                <span class="ident">OpCode::Not</span> =&gt; <span class="prelude-val">Some</span>(<span class="ident">Instruction::Not</span>),
                 <span class="ident">OpCode::Negate</span> =&gt; <span class="prelude-val">Some</span>(<span class="ident">Instruction::Negate</span>),
                 <span class="ident">OpCode::Return</span> =&gt; <span class="prelude-val">Some</span>(<span class="ident">Instruction::Return</span>),
             }
@@ -637,21 +651,21 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">op_code_can_be_constructed_from_byte</span>() {
         <span class="macro">assert_eq!</span>(<span class="ident">OpCode::from_byte</span>(<span class="ident">CodeByte::new</span>(<span class="number">0</span>)), <span class="ident">OpCode::Constant</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">OpCode::from_byte</span>(<span class="ident">CodeByte::new</span>(<span class="number">9</span>)), <span class="ident">OpCode::Return</span>);
+        <span class="macro">assert_eq!</span>(<span class="ident">OpCode::from_byte</span>(<span class="ident">CodeByte::new</span>(<span class="number">10</span>)), <span class="ident">OpCode::Return</span>);
 
-        <span class="macro">assert_eq!</span>(
-            <span class="kw-2">*</span><span class="ident">catch_unwind</span>(<span class="op">|</span><span class="op">|</span> { <span class="ident">OpCode::from_byte</span>(<span class="ident">CodeByte::new</span>(<span class="number">10</span>)) })
-                .<span class="ident">unwrap_err</span>()
-                .<span class="ident">downcast_ref</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>()
-                .<span class="ident">unwrap</span>(),
-            <span class="string">&quot;Value 10 is not a valid op code.&quot;</span>
-        );
         <span class="macro">assert_eq!</span>(
             <span class="kw-2">*</span><span class="ident">catch_unwind</span>(<span class="op">|</span><span class="op">|</span> { <span class="ident">OpCode::from_byte</span>(<span class="ident">CodeByte::new</span>(<span class="number">11</span>)) })
                 .<span class="ident">unwrap_err</span>()
                 .<span class="ident">downcast_ref</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>()
                 .<span class="ident">unwrap</span>(),
             <span class="string">&quot;Value 11 is not a valid op code.&quot;</span>
+        );
+        <span class="macro">assert_eq!</span>(
+            <span class="kw-2">*</span><span class="ident">catch_unwind</span>(<span class="op">|</span><span class="op">|</span> { <span class="ident">OpCode::from_byte</span>(<span class="ident">CodeByte::new</span>(<span class="number">12</span>)) })
+                .<span class="ident">unwrap_err</span>()
+                .<span class="ident">downcast_ref</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>()
+                .<span class="ident">unwrap</span>(),
+            <span class="string">&quot;Value 12 is not a valid op code.&quot;</span>
         );
         <span class="macro">assert_eq!</span>(
             <span class="kw-2">*</span><span class="ident">catch_unwind</span>(<span class="op">|</span><span class="op">|</span> { <span class="ident">OpCode::from_byte</span>(<span class="ident">CodeByte::new</span>(<span class="number">100</span>)) })
@@ -673,8 +687,8 @@
             <span class="macro">vec!</span>[
                 <span class="ident">CodeByte::new</span>(<span class="number">0</span>),
                 <span class="ident">CodeByte::new</span>(<span class="number">23</span>),
-                <span class="ident">CodeByte::new</span>(<span class="number">8</span>),
-                <span class="ident">CodeByte::new</span>(<span class="number">9</span>)
+                <span class="ident">CodeByte::new</span>(<span class="number">9</span>),
+                <span class="ident">CodeByte::new</span>(<span class="number">10</span>)
             ]
         );
         <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">lines</span>, <span class="macro">vec!</span>[<span class="number">150</span>, <span class="number">150</span>, <span class="number">77</span>, <span class="number">99</span>]);
