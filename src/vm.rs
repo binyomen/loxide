@@ -45,6 +45,20 @@ impl ValueStack {
         self.data[self.index].take().unwrap()
     }
 
+    /// Peek into the [`ValueStack`] at the given index. Panics if the index is
+    /// out of range.
+    fn peek(&self, index: usize) -> &Value {
+        debug_assert!(index < self.index);
+        self.data[self.index - 1 - index].as_ref().unwrap()
+    }
+
+    fn reset(&mut self) {
+        for entry in self.data.iter_mut() {
+            *entry = None;
+        }
+        self.index = 0;
+    }
+
     #[cfg(feature = "debug_trace_execution")]
     fn debug_print(&self) {
         print!("          ");
@@ -93,6 +107,14 @@ impl<'a> Vm<'a> {
     }
 
     pub fn interpret(&mut self) -> Result<(), ()> {
+        self.interpret_inner().map_err(|format_args| {
+            eprintln!("{}", format_args);
+            eprintln!("[line {}] in script", self.cursor.previous_line());
+            self.stack.reset();
+        })
+    }
+
+    fn interpret_inner(&mut self) -> Result<(), String> {
         let result = loop {
             #[cfg(feature = "debug_trace_execution")]
             let offset = self.cursor.offset();
@@ -113,20 +135,19 @@ impl<'a> Vm<'a> {
                     self.stack.push(constant.clone());
                 }
                 Instruction::Add => {
-                    self.execute_binary_operation(Value::add);
+                    self.execute_binary_operation(Value::add)?;
                 }
                 Instruction::Subtract => {
-                    self.execute_binary_operation(Value::subtract);
+                    self.execute_binary_operation(Value::subtract)?;
                 }
                 Instruction::Multiply => {
-                    self.execute_binary_operation(Value::multiply);
+                    self.execute_binary_operation(Value::multiply)?;
                 }
                 Instruction::Divide => {
-                    self.execute_binary_operation(Value::divide);
+                    self.execute_binary_operation(Value::divide)?;
                 }
                 Instruction::Negate => {
-                    let negated_value = self.stack.pop().negate();
-                    self.stack.push(negated_value)
+                    self.execute_unary_operation(Value::negate)?;
                 }
                 Instruction::Return => {
                     println!("{}", value_to_string(&self.stack.pop()));
@@ -144,9 +165,35 @@ impl<'a> Vm<'a> {
         result
     }
 
-    fn execute_binary_operation(&mut self, op: impl FnOnce(&Value, Value) -> Value) {
-        let b = self.stack.pop();
-        let a = self.stack.pop();
-        self.stack.push(op(&a, b));
+    fn execute_unary_operation(
+        &mut self,
+        op: impl FnOnce(&Value) -> Result<Value, String>,
+    ) -> Result<(), String> {
+        let v = self.stack.peek(0);
+        let result = op(v)?;
+
+        // We succeeded the computation. Pop the operand off the stack now and
+        // push the result.
+        self.stack.pop();
+        self.stack.push(result);
+
+        Ok(())
+    }
+
+    fn execute_binary_operation(
+        &mut self,
+        op: impl FnOnce(&Value, &Value) -> Result<Value, String>,
+    ) -> Result<(), String> {
+        let b = self.stack.peek(0);
+        let a = self.stack.peek(1);
+        let result = op(a, b)?;
+
+        // We succeeded the computation. Pop the operands off the stack now and
+        // push the result.
+        self.stack.pop();
+        self.stack.pop();
+        self.stack.push(result);
+
+        Ok(())
     }
 }

@@ -4,9 +4,8 @@ use {
     std::panic::catch_unwind,
 };
 
-/// A helper function to make a numeric Value. This cleans up the test code slightly.
 fn vn(n: f64) -> Value {
-    Value::new(n)
+    Value::Number(n)
 }
 
 fn test_vm<const N: usize>(source_code: &str, expected_stacks: [&[Value]; N]) {
@@ -62,6 +61,26 @@ fn value_stack_can_pop_values() {
 }
 
 #[test]
+fn value_stack_can_peek_values() {
+    let mut stack = ValueStack::new();
+    stack.push(vn(123.0));
+    stack.push(vn(69.420));
+
+    assert_eq!(stack.peek(0), &vn(69.420));
+    assert_eq!(stack.peek(1), &vn(123.0));
+
+    assert_eq!(
+        *catch_unwind(move || {
+            stack.peek(2);
+        })
+        .unwrap_err()
+        .downcast_ref::<&str>()
+        .unwrap(),
+        "assertion failed: index < self.index"
+    );
+}
+
+#[test]
 fn value_stack_can_push_up_to_256_values() {
     let mut stack = ValueStack::new();
     for i in 0..256 {
@@ -101,6 +120,25 @@ fn value_stack_cant_pop_when_empty() {
         .downcast_ref::<&str>()
         .unwrap(),
         "Cannot pop from an empty stack."
+    );
+}
+
+#[test]
+fn value_stack_can_reset() {
+    let mut stack = ValueStack::new();
+    stack.push(vn(123.0));
+    stack.push(vn(69.420));
+
+    assert_eq!(
+        stack.data.iter().take(3).collect::<Vec<_>>(),
+        vec![&Some(vn(123.0)), &Some(vn(69.420)), &None]
+    );
+
+    stack.reset();
+    assert_eq!(stack.index, 0);
+    assert_eq!(
+        stack.data.iter().take(3).collect::<Vec<_>>(),
+        vec![&None, &None, &None]
     );
 }
 
@@ -147,7 +185,7 @@ fn floating_point_math() {
         .unwrap_err()
         .downcast_ref::<String>()
         .unwrap(),
-        "assertion failed: `(left == right)`\n  left: `[[Value(0.0)], [Value(0.0), Value(0.0)], [Value(NaN)], []]`,\n right: `[[Value(0.0)], [Value(0.0), Value(0.0)], [Value(NaN)], []]`"
+        "assertion failed: `(left == right)`\n  left: `[[Number(0.0)], [Number(0.0), Number(0.0)], [Number(NaN)], []]`,\n right: `[[Number(0.0)], [Number(0.0), Number(0.0)], [Number(NaN)], []]`"
     );
 }
 
@@ -186,6 +224,8 @@ fn arithmetic() {
             &[],
         ],
     );
+    test_vm("1 - 2", [&[vn(1.0)], &[vn(1.0), vn(2.0)], &[vn(-1.0)], &[]]);
+    test_vm("1 / 2", [&[vn(1.0)], &[vn(1.0), vn(2.0)], &[vn(0.5)], &[]]);
 
     test_vm("-1", [&[vn(1.0)], &[vn(-1.0)], &[]]);
 

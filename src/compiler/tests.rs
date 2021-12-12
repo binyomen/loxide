@@ -1,5 +1,9 @@
 use {super::*, crate::chunk::Instruction, std::panic::catch_unwind};
 
+fn vn(n: f64) -> Value {
+    Value::Number(n)
+}
+
 fn compile(source_code: &str) -> Result<Chunk, ()> {
     Compiler::new(Lexer::new(source_code)).compile()
 }
@@ -121,25 +125,25 @@ fn compile_number_literals() {
     test_compilation(
         "1",
         [Instruction::Constant(0), Instruction::Return],
-        [Value::new(1.0)],
+        [vn(1.0)],
         [1; 2],
     );
     test_compilation(
         "12345.6789",
         [Instruction::Constant(0), Instruction::Return],
-        [Value::new(12345.6789)],
+        [vn(12345.6789)],
         [1; 2],
     );
     test_compilation(
         "0",
         [Instruction::Constant(0), Instruction::Return],
-        [Value::new(0.0)],
+        [vn(0.0)],
         [1; 2],
     );
     test_compilation(
         "00000.00000",
         [Instruction::Constant(0), Instruction::Return],
-        [Value::new(0.0)],
+        [vn(0.0)],
         [1; 2],
     );
 }
@@ -153,7 +157,7 @@ fn compile_unary_operators() {
             Instruction::Negate,
             Instruction::Return,
         ],
-        [Value::new(1.0)],
+        [vn(1.0)],
         [1; 3],
     );
     test_compilation(
@@ -163,7 +167,7 @@ fn compile_unary_operators() {
             Instruction::Negate,
             Instruction::Return,
         ],
-        [Value::new(12345.6789)],
+        [vn(12345.6789)],
         [1; 3],
     );
     test_compilation(
@@ -173,7 +177,7 @@ fn compile_unary_operators() {
             Instruction::Negate,
             Instruction::Return,
         ],
-        [Value::new(0.0)],
+        [vn(0.0)],
         [1; 3],
     );
     test_compilation(
@@ -183,7 +187,7 @@ fn compile_unary_operators() {
             Instruction::Negate,
             Instruction::Return,
         ],
-        [Value::new(0.0)],
+        [vn(0.0)],
         [1; 3],
     );
 
@@ -197,7 +201,7 @@ fn compile_unary_operators() {
             Instruction::Negate,
             Instruction::Return,
         ],
-        [Value::new(0.0)],
+        [vn(0.0)],
         [1; 6],
     );
 
@@ -208,7 +212,7 @@ fn compile_unary_operators() {
             Instruction::Negate,
             Instruction::Return,
         ],
-        [Value::new(0.0)],
+        [vn(0.0)],
         [1; 3],
     );
 
@@ -221,7 +225,7 @@ fn compile_unary_operators() {
             Instruction::Add,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0)],
+        [vn(0.0), vn(1.0)],
         [1; 5],
     );
     test_compilation(
@@ -233,7 +237,7 @@ fn compile_unary_operators() {
             Instruction::Negate,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0)],
+        [vn(0.0), vn(1.0)],
         [1; 5],
     );
     test_compilation(
@@ -245,7 +249,7 @@ fn compile_unary_operators() {
             Instruction::Multiply,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0)],
+        [vn(0.0), vn(1.0)],
         [1; 5],
     );
     test_compilation(
@@ -257,7 +261,7 @@ fn compile_unary_operators() {
             Instruction::Negate,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0)],
+        [vn(0.0), vn(1.0)],
         [1; 5],
     );
 }
@@ -272,7 +276,7 @@ fn compile_binary_operators() {
             Instruction::Add,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0)],
+        [vn(0.0), vn(1.0)],
         [1; 4],
     );
     test_compilation(
@@ -283,7 +287,7 @@ fn compile_binary_operators() {
             Instruction::Subtract,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0)],
+        [vn(0.0), vn(1.0)],
         [1; 4],
     );
     test_compilation(
@@ -294,7 +298,7 @@ fn compile_binary_operators() {
             Instruction::Multiply,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0)],
+        [vn(0.0), vn(1.0)],
         [1; 4],
     );
     test_compilation(
@@ -305,7 +309,7 @@ fn compile_binary_operators() {
             Instruction::Divide,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0)],
+        [vn(0.0), vn(1.0)],
         [1; 4],
     );
 
@@ -319,7 +323,7 @@ fn compile_binary_operators() {
             Instruction::Add,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0), Value::new(2.0)],
+        [vn(0.0), vn(1.0), vn(2.0)],
         [1; 6],
     );
     test_compilation(
@@ -332,7 +336,7 @@ fn compile_binary_operators() {
             Instruction::Subtract,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0), Value::new(2.0)],
+        [vn(0.0), vn(1.0), vn(2.0)],
         [1; 6],
     );
     test_compilation(
@@ -345,7 +349,7 @@ fn compile_binary_operators() {
             Instruction::Multiply,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0), Value::new(2.0)],
+        [vn(0.0), vn(1.0), vn(2.0)],
         [1; 6],
     );
     test_compilation(
@@ -358,7 +362,7 @@ fn compile_binary_operators() {
             Instruction::Divide,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0), Value::new(2.0)],
+        [vn(0.0), vn(1.0), vn(2.0)],
         [1; 6],
     );
 }
@@ -375,7 +379,7 @@ fn binary_operator_precedence() {
             Instruction::Add,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0), Value::new(2.0)],
+        [vn(0.0), vn(1.0), vn(2.0)],
         [1; 6],
     );
     test_compilation(
@@ -388,7 +392,7 @@ fn binary_operator_precedence() {
             Instruction::Add,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0), Value::new(2.0)],
+        [vn(0.0), vn(1.0), vn(2.0)],
         [1; 6],
     );
     test_compilation(
@@ -401,7 +405,7 @@ fn binary_operator_precedence() {
             Instruction::Subtract,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0), Value::new(2.0)],
+        [vn(0.0), vn(1.0), vn(2.0)],
         [1; 6],
     );
     test_compilation(
@@ -414,7 +418,7 @@ fn binary_operator_precedence() {
             Instruction::Subtract,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0), Value::new(2.0)],
+        [vn(0.0), vn(1.0), vn(2.0)],
         [1; 6],
     );
 
@@ -441,15 +445,15 @@ fn binary_operator_precedence() {
             Instruction::Return,
         ],
         [
-            Value::new(0.0),
-            Value::new(1.0),
-            Value::new(2.0),
-            Value::new(3.0),
-            Value::new(4.0),
-            Value::new(5.0),
-            Value::new(6.0),
-            Value::new(7.0),
-            Value::new(8.0),
+            vn(0.0),
+            vn(1.0),
+            vn(2.0),
+            vn(3.0),
+            vn(4.0),
+            vn(5.0),
+            vn(6.0),
+            vn(7.0),
+            vn(8.0),
         ],
         [1; 18],
     );
@@ -460,19 +464,19 @@ fn compile_groupings() {
     test_compilation(
         "(0)",
         [Instruction::Constant(0), Instruction::Return],
-        [Value::new(0.0)],
+        [vn(0.0)],
         [1; 2],
     );
     test_compilation(
         "((0))",
         [Instruction::Constant(0), Instruction::Return],
-        [Value::new(0.0)],
+        [vn(0.0)],
         [1; 2],
     );
     test_compilation(
         "(((0)))",
         [Instruction::Constant(0), Instruction::Return],
-        [Value::new(0.0)],
+        [vn(0.0)],
         [1; 2],
     );
 
@@ -486,7 +490,7 @@ fn compile_groupings() {
             Instruction::Add,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0), Value::new(2.0)],
+        [vn(0.0), vn(1.0), vn(2.0)],
         [1; 6],
     );
 
@@ -500,7 +504,7 @@ fn compile_groupings() {
             Instruction::Add,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0), Value::new(2.0)],
+        [vn(0.0), vn(1.0), vn(2.0)],
         [1; 6],
     );
     test_compilation(
@@ -513,7 +517,7 @@ fn compile_groupings() {
             Instruction::Add,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0), Value::new(2.0)],
+        [vn(0.0), vn(1.0), vn(2.0)],
         [1; 6],
     );
     test_compilation(
@@ -526,7 +530,7 @@ fn compile_groupings() {
             Instruction::Multiply,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0), Value::new(2.0)],
+        [vn(0.0), vn(1.0), vn(2.0)],
         [1; 6],
     );
     test_compilation(
@@ -539,7 +543,7 @@ fn compile_groupings() {
             Instruction::Add,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0), Value::new(2.0)],
+        [vn(0.0), vn(1.0), vn(2.0)],
         [1; 6],
     );
 
@@ -555,12 +559,7 @@ fn compile_groupings() {
             Instruction::Multiply,
             Instruction::Return,
         ],
-        [
-            Value::new(0.0),
-            Value::new(1.0),
-            Value::new(2.0),
-            Value::new(3.0),
-        ],
+        [vn(0.0), vn(1.0), vn(2.0), vn(3.0)],
         [1; 8],
     );
     test_compilation(
@@ -575,12 +574,7 @@ fn compile_groupings() {
             Instruction::Multiply,
             Instruction::Return,
         ],
-        [
-            Value::new(0.0),
-            Value::new(1.0),
-            Value::new(2.0),
-            Value::new(3.0),
-        ],
+        [vn(0.0), vn(1.0), vn(2.0), vn(3.0)],
         [1; 8],
     );
 }
@@ -623,19 +617,19 @@ fn complex_arithmetic() {
             Instruction::Return,
         ],
         [
-            Value::new(0.0),
-            Value::new(1.0),
-            Value::new(2.0),
-            Value::new(3.0),
-            Value::new(4.0),
-            Value::new(5.0),
-            Value::new(6.0),
-            Value::new(7.0),
-            Value::new(8.0),
-            Value::new(9.0),
-            Value::new(10.0),
-            Value::new(11.0),
-            Value::new(12.0),
+            vn(0.0),
+            vn(1.0),
+            vn(2.0),
+            vn(3.0),
+            vn(4.0),
+            vn(5.0),
+            vn(6.0),
+            vn(7.0),
+            vn(8.0),
+            vn(9.0),
+            vn(10.0),
+            vn(11.0),
+            vn(12.0),
         ],
         [1; 31],
     );
@@ -651,7 +645,7 @@ fn compile_multiple_lines() {
             Instruction::Add,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0)],
+        [vn(0.0), vn(1.0)],
         [2, 2, 2, 2],
     );
     test_compilation(
@@ -662,7 +656,7 @@ fn compile_multiple_lines() {
             Instruction::Add,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0)],
+        [vn(0.0), vn(1.0)],
         [1, 2, 2, 2],
     );
     test_compilation(
@@ -673,7 +667,7 @@ fn compile_multiple_lines() {
             Instruction::Add,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0)],
+        [vn(0.0), vn(1.0)],
         [1, 2, 1, 2],
     );
     test_compilation(
@@ -684,7 +678,7 @@ fn compile_multiple_lines() {
             Instruction::Add,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0)],
+        [vn(0.0), vn(1.0)],
         [1, 1, 1, 2],
     );
 
@@ -696,7 +690,7 @@ fn compile_multiple_lines() {
             Instruction::Add,
             Instruction::Return,
         ],
-        [Value::new(0.0), Value::new(1.0)],
+        [vn(0.0), vn(1.0)],
         [1, 1, 1, 2],
     );
 
@@ -707,7 +701,7 @@ fn compile_multiple_lines() {
             Instruction::Negate,
             Instruction::Return,
         ],
-        [Value::new(0.0)],
+        [vn(0.0)],
         [2, 2, 2],
     );
     test_compilation(
@@ -717,7 +711,7 @@ fn compile_multiple_lines() {
             Instruction::Negate,
             Instruction::Return,
         ],
-        [Value::new(0.0)],
+        [vn(0.0)],
         [2, 1, 2],
     );
     test_compilation(
@@ -727,7 +721,7 @@ fn compile_multiple_lines() {
             Instruction::Negate,
             Instruction::Return,
         ],
-        [Value::new(0.0)],
+        [vn(0.0)],
         [1, 1, 2],
     );
 }

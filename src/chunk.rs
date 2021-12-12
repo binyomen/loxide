@@ -193,6 +193,11 @@ impl<'a> ChunkCursor<'a> {
         self.offset
     }
 
+    pub fn previous_line(&self) -> usize {
+        debug_assert!(self.offset > 0);
+        self.chunk.line_at_offset(self.offset - 1)
+    }
+
     fn at_end(&self) -> bool {
         self.offset >= self.chunk.code.len()
     }
@@ -205,6 +210,10 @@ mod tests {
         std::{mem::size_of, panic::catch_unwind},
         strum::IntoEnumIterator,
     };
+
+    fn vn(n: f64) -> Value {
+        Value::Number(n)
+    }
 
     #[test]
     fn code_byte_has_correct_representation() {
@@ -274,19 +283,19 @@ mod tests {
     #[test]
     fn chunk_can_add_constant() {
         let mut chunk = Chunk::new();
-        assert_eq!(chunk.add_constant(Value::new(1.2)), Some(0));
-        assert_eq!(chunk.add_constant(Value::new(500.3928)), Some(1));
+        assert_eq!(chunk.add_constant(vn(1.2)), Some(0));
+        assert_eq!(chunk.add_constant(vn(500.3928)), Some(1));
         assert_eq!(chunk.constants.len(), 2);
 
-        assert_eq!(chunk.get_constant(0), &Value::new(1.2));
-        assert_eq!(chunk.get_constant(1), &Value::new(500.3928));
+        assert_eq!(chunk.get_constant(0), &vn(1.2));
+        assert_eq!(chunk.get_constant(1), &vn(500.3928));
     }
 
     #[test]
     fn chunk_can_add_up_to_256_constants() {
         let mut chunk = Chunk::new();
         for i in 0..256 {
-            assert_eq!(chunk.add_constant(Value::new(i as f64)), Some(i as u8));
+            assert_eq!(chunk.add_constant(vn(i as f64)), Some(i as u8));
         }
     }
 
@@ -294,10 +303,10 @@ mod tests {
     fn chunk_cannot_add_more_than_256_constants() {
         let mut chunk = Chunk::new();
         for i in 0..256 {
-            assert_eq!(chunk.add_constant(Value::new(i as f64)), Some(i as u8));
+            assert_eq!(chunk.add_constant(vn(i as f64)), Some(i as u8));
         }
 
-        assert_eq!(chunk.add_constant(Value::new(256.0)), None);
+        assert_eq!(chunk.add_constant(vn(256.0)), None);
     }
 
     #[test]

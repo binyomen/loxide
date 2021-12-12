@@ -207,7 +207,7 @@ impl<'a> Compiler<'a> {
     fn compile_number(&mut self, token: Token) {
         let n = f64::from_str(self.token_string(&token)).unwrap();
         let line_number = self.line_number(&token);
-        let constant_index = self.add_constant(Value::new(n), token);
+        let constant_index = self.add_constant(Value::Number(n), token);
         self.chunk
             .add_constant_instruction(constant_index, line_number);
     }
