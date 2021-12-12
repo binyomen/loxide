@@ -234,52 +234,40 @@ impl<'a> Lexer<'a> {
         // to call get_unchecked here. We also know all keywords have only
         // ASCII characters, meaning checking individual bytes works.
         match unsafe { bytes.get_unchecked(0) } {
-            /*a*/
-            97 => Self::maybe_lex_keyword(&bytes[1..], "nd".as_bytes(), TokenType::And),
-            /*c*/
-            99 => Self::maybe_lex_keyword(&bytes[1..], "lass".as_bytes(), TokenType::Class),
-            /*e*/
-            101 => Self::maybe_lex_keyword(&bytes[1..], "lse".as_bytes(), TokenType::Else),
-            /*f*/
-            102 => {
+            b'a' => Self::maybe_lex_keyword(&bytes[1..], "nd".as_bytes(), TokenType::And),
+            b'c' => Self::maybe_lex_keyword(&bytes[1..], "lass".as_bytes(), TokenType::Class),
+            b'e' => Self::maybe_lex_keyword(&bytes[1..], "lse".as_bytes(), TokenType::Else),
+            b'f' => {
                 if let Some(second_byte) = bytes.get(1) {
                     match second_byte {
-                        /*a*/
-                        97 => {
+                        b'a' => {
                             Self::maybe_lex_keyword(&bytes[2..], "lse".as_bytes(), TokenType::False)
                         }
-                        /*o*/
-                        111 => Self::maybe_lex_keyword(&bytes[2..], "r".as_bytes(), TokenType::For),
-                        /*u*/
-                        117 => Self::maybe_lex_keyword(&bytes[2..], "n".as_bytes(), TokenType::Fun),
+                        b'o' => {
+                            Self::maybe_lex_keyword(&bytes[2..], "r".as_bytes(), TokenType::For)
+                        }
+                        b'u' => {
+                            Self::maybe_lex_keyword(&bytes[2..], "n".as_bytes(), TokenType::Fun)
+                        }
                         _ => TokenType::Identifier,
                     }
                 } else {
                     TokenType::Identifier
                 }
             }
-            /*i*/
-            105 => Self::maybe_lex_keyword(&bytes[1..], "f".as_bytes(), TokenType::If),
-            /*n*/
-            110 => Self::maybe_lex_keyword(&bytes[1..], "il".as_bytes(), TokenType::Nil),
-            /*o*/
-            111 => Self::maybe_lex_keyword(&bytes[1..], "r".as_bytes(), TokenType::Or),
-            /*p*/
-            112 => Self::maybe_lex_keyword(&bytes[1..], "rint".as_bytes(), TokenType::Print),
-            /*r*/
-            114 => Self::maybe_lex_keyword(&bytes[1..], "eturn".as_bytes(), TokenType::Return),
-            /*s*/
-            115 => Self::maybe_lex_keyword(&bytes[1..], "uper".as_bytes(), TokenType::Super),
-            /*t*/
-            116 => {
+            b'i' => Self::maybe_lex_keyword(&bytes[1..], "f".as_bytes(), TokenType::If),
+            b'n' => Self::maybe_lex_keyword(&bytes[1..], "il".as_bytes(), TokenType::Nil),
+            b'o' => Self::maybe_lex_keyword(&bytes[1..], "r".as_bytes(), TokenType::Or),
+            b'p' => Self::maybe_lex_keyword(&bytes[1..], "rint".as_bytes(), TokenType::Print),
+            b'r' => Self::maybe_lex_keyword(&bytes[1..], "eturn".as_bytes(), TokenType::Return),
+            b's' => Self::maybe_lex_keyword(&bytes[1..], "uper".as_bytes(), TokenType::Super),
+            b't' => {
                 if let Some(second_byte) = bytes.get(1) {
                     match second_byte {
-                        /*h*/
-                        104 => {
+                        b'h' => {
                             Self::maybe_lex_keyword(&bytes[2..], "is".as_bytes(), TokenType::This)
                         }
-                        /*r*/
-                        114 => {
+                        b'r' => {
                             Self::maybe_lex_keyword(&bytes[2..], "ue".as_bytes(), TokenType::True)
                         }
                         _ => TokenType::Identifier,
@@ -288,10 +276,8 @@ impl<'a> Lexer<'a> {
                     TokenType::Identifier
                 }
             }
-            /*v*/
-            118 => Self::maybe_lex_keyword(&bytes[1..], "ar".as_bytes(), TokenType::Var),
-            /*w*/
-            119 => Self::maybe_lex_keyword(&bytes[1..], "hile".as_bytes(), TokenType::While),
+            b'v' => Self::maybe_lex_keyword(&bytes[1..], "ar".as_bytes(), TokenType::Var),
+            b'w' => Self::maybe_lex_keyword(&bytes[1..], "hile".as_bytes(), TokenType::While),
 
             _ => TokenType::Identifier,
         }
