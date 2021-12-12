@@ -345,6 +345,15 @@
 <span id="345">345</span>
 <span id="346">346</span>
 <span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Utilities for dealing with chunks of bytecode.</span>
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">debug_assertions</span>)]</span>
@@ -540,6 +549,11 @@
         <span class="self">self</span>.<span class="ident">offset</span>
     }
 
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">previous_line</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
+        <span class="macro">debug_assert!</span>(<span class="self">self</span>.<span class="ident">offset</span> <span class="op">&gt;</span> <span class="number">0</span>);
+        <span class="self">self</span>.<span class="ident">chunk</span>.<span class="ident">line_at_offset</span>(<span class="self">self</span>.<span class="ident">offset</span> <span class="op">-</span> <span class="number">1</span>)
+    }
+
     <span class="kw">fn</span> <span class="ident">at_end</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">offset</span> <span class="op">&gt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">chunk</span>.<span class="ident">code</span>.<span class="ident">len</span>()
     }
@@ -552,6 +566,10 @@
         <span class="ident">std</span>::{<span class="ident">mem::size_of</span>, <span class="ident">panic::catch_unwind</span>},
         <span class="ident">strum::IntoEnumIterator</span>,
     };
+
+    <span class="kw">fn</span> <span class="ident">vn</span>(<span class="ident">n</span>: <span class="ident">f64</span>) -&gt; <span class="ident">Value</span> {
+        <span class="ident">Value::Number</span>(<span class="ident">n</span>)
+    }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">code_byte_has_correct_representation</span>() {
@@ -621,19 +639,19 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">chunk_can_add_constant</span>() {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">chunk</span> <span class="op">=</span> <span class="ident">Chunk::new</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">Value::new</span>(<span class="number">1.2</span>)), <span class="prelude-val">Some</span>(<span class="number">0</span>));
-        <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">Value::new</span>(<span class="number">500.3928</span>)), <span class="prelude-val">Some</span>(<span class="number">1</span>));
+        <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">vn</span>(<span class="number">1.2</span>)), <span class="prelude-val">Some</span>(<span class="number">0</span>));
+        <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">vn</span>(<span class="number">500.3928</span>)), <span class="prelude-val">Some</span>(<span class="number">1</span>));
         <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">constants</span>.<span class="ident">len</span>(), <span class="number">2</span>);
 
-        <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">get_constant</span>(<span class="number">0</span>), <span class="kw-2">&amp;</span><span class="ident">Value::new</span>(<span class="number">1.2</span>));
-        <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">get_constant</span>(<span class="number">1</span>), <span class="kw-2">&amp;</span><span class="ident">Value::new</span>(<span class="number">500.3928</span>));
+        <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">get_constant</span>(<span class="number">0</span>), <span class="kw-2">&amp;</span><span class="ident">vn</span>(<span class="number">1.2</span>));
+        <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">get_constant</span>(<span class="number">1</span>), <span class="kw-2">&amp;</span><span class="ident">vn</span>(<span class="number">500.3928</span>));
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">chunk_can_add_up_to_256_constants</span>() {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">chunk</span> <span class="op">=</span> <span class="ident">Chunk::new</span>();
         <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">256</span> {
-            <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">Value::new</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">f64</span>)), <span class="prelude-val">Some</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">u8</span>));
+            <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">vn</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">f64</span>)), <span class="prelude-val">Some</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">u8</span>));
         }
     }
 
@@ -641,10 +659,10 @@
     <span class="kw">fn</span> <span class="ident">chunk_cannot_add_more_than_256_constants</span>() {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">chunk</span> <span class="op">=</span> <span class="ident">Chunk::new</span>();
         <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">256</span> {
-            <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">Value::new</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">f64</span>)), <span class="prelude-val">Some</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">u8</span>));
+            <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">vn</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">f64</span>)), <span class="prelude-val">Some</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">u8</span>));
         }
 
-        <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">Value::new</span>(<span class="number">256.0</span>)), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(<span class="ident">chunk</span>.<span class="ident">add_constant</span>(<span class="ident">vn</span>(<span class="number">256.0</span>)), <span class="prelude-val">None</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
