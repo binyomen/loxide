@@ -4,8 +4,16 @@ use {
     std::panic::catch_unwind,
 };
 
+fn vni() -> Value {
+    Value::Nil
+}
+
 fn vn(n: f64) -> Value {
     Value::Number(n)
+}
+
+fn vb(b: bool) -> Value {
+    Value::Bool(b)
 }
 
 fn test_vm<const N: usize>(source_code: &str, expected_stacks: [&[Value]; N]) {
@@ -149,6 +157,12 @@ fn literals() {
     test_vm("1234.5678", [&[vn(1234.5678)], &[]]);
     test_vm("(1234.5678)", [&[vn(1234.5678)], &[]]);
     test_vm("((1234.5678))", [&[vn(1234.5678)], &[]]);
+
+    test_vm("nil", [&[vni()], &[]]);
+    test_vm("true", [&[vb(true)], &[]]);
+    test_vm("false", [&[vb(false)], &[]]);
+    test_vm("(false)", [&[vb(false)], &[]]);
+    test_vm("((false))", [&[vb(false)], &[]]);
 }
 
 #[test]

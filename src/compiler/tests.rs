@@ -149,6 +149,18 @@ fn compile_number_literals() {
 }
 
 #[test]
+fn compile_keyword_literals() {
+    test_compilation("nil", [Instruction::Nil, Instruction::Return], [], [1; 2]);
+    test_compilation("true", [Instruction::True, Instruction::Return], [], [1; 2]);
+    test_compilation(
+        "false",
+        [Instruction::False, Instruction::Return],
+        [],
+        [1; 2],
+    );
+}
+
+#[test]
 fn compile_unary_operators() {
     test_compilation(
         "-1",
@@ -576,6 +588,13 @@ fn compile_groupings() {
         ],
         [vn(0.0), vn(1.0), vn(2.0), vn(3.0)],
         [1; 8],
+    );
+
+    test_compilation(
+        "(true)",
+        [Instruction::True, Instruction::Return],
+        [],
+        [1; 2],
     );
 }
 

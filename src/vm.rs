@@ -134,6 +134,10 @@ impl<'a> Vm<'a> {
                     let constant = self.chunk.get_constant(index);
                     self.stack.push(constant.clone());
                 }
+                Instruction::Nil => self.stack.push(Value::Nil),
+                Instruction::True => self.stack.push(Value::Bool(true)),
+                Instruction::False => self.stack.push(Value::Bool(false)),
+
                 Instruction::Add => {
                     self.execute_binary_operation(Value::add)?;
                 }
@@ -149,6 +153,7 @@ impl<'a> Vm<'a> {
                 Instruction::Negate => {
                     self.execute_unary_operation(Value::negate)?;
                 }
+
                 Instruction::Return => {
                     println!("{}", value_to_string(&self.stack.pop()));
                     break Ok(());

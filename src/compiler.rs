@@ -212,13 +212,23 @@ impl<'a> Compiler<'a> {
             .add_constant_instruction(constant_index, line_number);
     }
 
+    /// Compiles literals that are represented by keywords.
+    fn compile_keyword_literal(&mut self, token: Token) {
+        match token.token_type {
+            TokenType::False => self.add_simple_instruction(&token, Chunk::add_false_instruction),
+            TokenType::Nil => self.add_simple_instruction(&token, Chunk::add_nil_instruction),
+            TokenType::True => self.add_simple_instruction(&token, Chunk::add_true_instruction),
+            _ => unreachable!(),
+        }
+    }
+
     /// Compile expressions that start with unary operators like minus.
     fn compile_unary_expression(&mut self, token: Token) {
         // Compile the operand.
         self.parse_with_precedence(InfixOperatorPrecedence::Unary);
 
         match token.token_type {
-            TokenType::Minus => self.chunk.add_negate_instruction(self.line_number(&token)),
+            TokenType::Minus => self.add_simple_instruction(&token, Chunk::add_negate_instruction),
             _ => unreachable!(),
         }
     }
@@ -230,16 +240,24 @@ impl<'a> Compiler<'a> {
         self.parse_with_precedence(get_infix_operator_precedence(&token.token_type).add_one());
 
         match token.token_type {
-            TokenType::Plus => self.chunk.add_add_instruction(self.line_number(&token)),
-            TokenType::Minus => self
-                .chunk
-                .add_subtract_instruction(self.line_number(&token)),
-            TokenType::Star => self
-                .chunk
-                .add_multiply_instruction(self.line_number(&token)),
-            TokenType::Slash => self.chunk.add_divide_instruction(self.line_number(&token)),
+            TokenType::Plus => self.add_simple_instruction(&token, Chunk::add_add_instruction),
+            TokenType::Minus => {
+                self.add_simple_instruction(&token, Chunk::add_subtract_instruction)
+            }
+            TokenType::Star => self.add_simple_instruction(&token, Chunk::add_multiply_instruction),
+            TokenType::Slash => self.add_simple_instruction(&token, Chunk::add_divide_instruction),
             _ => unreachable!(),
         }
+    }
+
+    /// Add an instruction that doesn't take any operands.
+    fn add_simple_instruction(
+        &mut self,
+        token: &Token,
+        add_instruction_function: fn(&mut Chunk, usize),
+    ) {
+        let line_number = self.line_number(token);
+        add_instruction_function(&mut self.chunk, line_number);
     }
 
     fn add_constant(&mut self, value: Value, token: Token) -> u8 {
@@ -351,6 +369,9 @@ impl<'a> Compiler<'a> {
             TokenType::LeftParen => Some(Self::compile_grouping),
             TokenType::Minus => Some(Self::compile_unary_expression),
             TokenType::Number => Some(Self::compile_number),
+            TokenType::False => Some(Self::compile_keyword_literal),
+            TokenType::Nil => Some(Self::compile_keyword_literal),
+            TokenType::True => Some(Self::compile_keyword_literal),
             _ => None,
         }
     }

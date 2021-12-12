@@ -24,6 +24,9 @@ impl CodeByte {
 #[repr(u8)]
 enum OpCode {
     Constant,
+    Nil,
+    True,
+    False,
     Add,
     Subtract,
     Multiply,
@@ -55,6 +58,9 @@ impl OpCode {
 #[derive(PartialEq, Eq, Debug)]
 pub enum Instruction {
     Constant(u8),
+    Nil,
+    True,
+    False,
     Add,
     Subtract,
     Multiply,
@@ -82,6 +88,18 @@ impl Chunk {
     pub fn add_constant_instruction(&mut self, constant_index: u8, line_number: usize) {
         self.add_byte(OpCode::Constant.as_byte(), line_number);
         self.add_byte(CodeByte::new(constant_index), line_number);
+    }
+
+    pub fn add_nil_instruction(&mut self, line_number: usize) {
+        self.add_byte(OpCode::Nil.as_byte(), line_number);
+    }
+
+    pub fn add_true_instruction(&mut self, line_number: usize) {
+        self.add_byte(OpCode::True.as_byte(), line_number);
+    }
+
+    pub fn add_false_instruction(&mut self, line_number: usize) {
+        self.add_byte(OpCode::False.as_byte(), line_number);
     }
 
     pub fn add_return_instruction(&mut self, line_number: usize) {
@@ -179,6 +197,9 @@ impl<'a> ChunkCursor<'a> {
                     self.offset += 1;
                     Some(Instruction::Constant(index))
                 }
+                OpCode::Nil => Some(Instruction::Nil),
+                OpCode::True => Some(Instruction::True),
+                OpCode::False => Some(Instruction::False),
                 OpCode::Add => Some(Instruction::Add),
                 OpCode::Subtract => Some(Instruction::Subtract),
                 OpCode::Multiply => Some(Instruction::Multiply),
@@ -238,20 +259,21 @@ mod tests {
     #[test]
     fn op_code_can_be_constructed_from_byte() {
         assert_eq!(OpCode::from_byte(CodeByte::new(0)), OpCode::Constant);
-        assert_eq!(OpCode::from_byte(CodeByte::new(6)), OpCode::Return);
+        assert_eq!(OpCode::from_byte(CodeByte::new(9)), OpCode::Return);
+
         assert_eq!(
-            *catch_unwind(|| { OpCode::from_byte(CodeByte::new(7)) })
+            *catch_unwind(|| { OpCode::from_byte(CodeByte::new(10)) })
                 .unwrap_err()
                 .downcast_ref::<String>()
                 .unwrap(),
-            "Value 7 is not a valid op code."
+            "Value 10 is not a valid op code."
         );
         assert_eq!(
-            *catch_unwind(|| { OpCode::from_byte(CodeByte::new(8)) })
+            *catch_unwind(|| { OpCode::from_byte(CodeByte::new(11)) })
                 .unwrap_err()
                 .downcast_ref::<String>()
                 .unwrap(),
-            "Value 8 is not a valid op code."
+            "Value 11 is not a valid op code."
         );
         assert_eq!(
             *catch_unwind(|| { OpCode::from_byte(CodeByte::new(100)) })
@@ -273,8 +295,8 @@ mod tests {
             vec![
                 CodeByte::new(0),
                 CodeByte::new(23),
-                CodeByte::new(5),
-                CodeByte::new(6)
+                CodeByte::new(8),
+                CodeByte::new(9)
             ]
         );
         assert_eq!(chunk.lines, vec![150, 150, 77, 99]);
