@@ -150,6 +150,10 @@ impl<'a> Vm<'a> {
                 Instruction::Divide => {
                     self.execute_binary_operation(Value::divide)?;
                 }
+
+                Instruction::Not => {
+                    self.execute_unary_operation(Value::not)?;
+                }
                 Instruction::Negate => {
                     self.execute_unary_operation(Value::negate)?;
                 }

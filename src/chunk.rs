@@ -31,6 +31,7 @@ enum OpCode {
     Subtract,
     Multiply,
     Divide,
+    Not,
     Negate,
     Return,
 }
@@ -65,6 +66,7 @@ pub enum Instruction {
     Subtract,
     Multiply,
     Divide,
+    Not,
     Negate,
     Return,
 }
@@ -120,6 +122,10 @@ impl Chunk {
 
     pub fn add_divide_instruction(&mut self, line_number: usize) {
         self.add_byte(OpCode::Divide.as_byte(), line_number);
+    }
+
+    pub fn add_not_instruction(&mut self, line_number: usize) {
+        self.add_byte(OpCode::Not.as_byte(), line_number);
     }
 
     pub fn add_negate_instruction(&mut self, line_number: usize) {
@@ -204,6 +210,7 @@ impl<'a> ChunkCursor<'a> {
                 OpCode::Subtract => Some(Instruction::Subtract),
                 OpCode::Multiply => Some(Instruction::Multiply),
                 OpCode::Divide => Some(Instruction::Divide),
+                OpCode::Not => Some(Instruction::Not),
                 OpCode::Negate => Some(Instruction::Negate),
                 OpCode::Return => Some(Instruction::Return),
             }
@@ -259,21 +266,21 @@ mod tests {
     #[test]
     fn op_code_can_be_constructed_from_byte() {
         assert_eq!(OpCode::from_byte(CodeByte::new(0)), OpCode::Constant);
-        assert_eq!(OpCode::from_byte(CodeByte::new(9)), OpCode::Return);
+        assert_eq!(OpCode::from_byte(CodeByte::new(10)), OpCode::Return);
 
-        assert_eq!(
-            *catch_unwind(|| { OpCode::from_byte(CodeByte::new(10)) })
-                .unwrap_err()
-                .downcast_ref::<String>()
-                .unwrap(),
-            "Value 10 is not a valid op code."
-        );
         assert_eq!(
             *catch_unwind(|| { OpCode::from_byte(CodeByte::new(11)) })
                 .unwrap_err()
                 .downcast_ref::<String>()
                 .unwrap(),
             "Value 11 is not a valid op code."
+        );
+        assert_eq!(
+            *catch_unwind(|| { OpCode::from_byte(CodeByte::new(12)) })
+                .unwrap_err()
+                .downcast_ref::<String>()
+                .unwrap(),
+            "Value 12 is not a valid op code."
         );
         assert_eq!(
             *catch_unwind(|| { OpCode::from_byte(CodeByte::new(100)) })
@@ -295,8 +302,8 @@ mod tests {
             vec![
                 CodeByte::new(0),
                 CodeByte::new(23),
-                CodeByte::new(8),
-                CodeByte::new(9)
+                CodeByte::new(9),
+                CodeByte::new(10)
             ]
         );
         assert_eq!(chunk.lines, vec![150, 150, 77, 99]);

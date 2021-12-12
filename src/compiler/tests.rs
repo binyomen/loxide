@@ -276,6 +276,47 @@ fn compile_unary_operators() {
         [vn(0.0), vn(1.0)],
         [1; 5],
     );
+
+    test_compilation(
+        "!true",
+        [Instruction::True, Instruction::Not, Instruction::Return],
+        [],
+        [1; 3],
+    );
+    test_compilation(
+        "!false",
+        [Instruction::False, Instruction::Not, Instruction::Return],
+        [],
+        [1; 3],
+    );
+    test_compilation(
+        "!!false",
+        [
+            Instruction::False,
+            Instruction::Not,
+            Instruction::Not,
+            Instruction::Return,
+        ],
+        [],
+        [1; 4],
+    );
+
+    test_compilation(
+        "!nil",
+        [Instruction::Nil, Instruction::Not, Instruction::Return],
+        [],
+        [1; 3],
+    );
+    test_compilation(
+        "!0",
+        [
+            Instruction::Constant(0),
+            Instruction::Not,
+            Instruction::Return,
+        ],
+        [vn(0.0)],
+        [1; 3],
+    );
 }
 
 #[test]

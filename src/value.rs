@@ -69,6 +69,10 @@ impl Value {
         Ok(Value::Number(n1 / n2))
     }
 
+    pub fn not(&self) -> Result<Value, String> {
+        Ok(Value::Bool(!value_to_bool(self)))
+    }
+
     pub fn negate(&self) -> Result<Value, String> {
         let n = check_operand_types!(self, Number, "number");
         Ok(Value::Number(-n))
@@ -80,5 +84,15 @@ pub fn value_to_string(value: &Value) -> String {
         Value::Nil => "nil".to_owned(),
         Value::Number(n) => n.to_string(),
         Value::Bool(b) => (if *b { "true" } else { "false" }).to_owned(),
+    }
+}
+
+/// Convert the given value to a boolean. In Lox, nil and false are falsey, and
+/// everything else is truthy.
+fn value_to_bool(value: &Value) -> bool {
+    match value {
+        Value::Nil => false,
+        Value::Bool(b) => *b,
+        _ => true,
     }
 }

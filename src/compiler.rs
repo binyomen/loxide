@@ -229,6 +229,7 @@ impl<'a> Compiler<'a> {
 
         match token.token_type {
             TokenType::Minus => self.add_simple_instruction(&token, Chunk::add_negate_instruction),
+            TokenType::Bang => self.add_simple_instruction(&token, Chunk::add_not_instruction),
             _ => unreachable!(),
         }
     }
@@ -368,6 +369,7 @@ impl<'a> Compiler<'a> {
         match token_type {
             TokenType::LeftParen => Some(Self::compile_grouping),
             TokenType::Minus => Some(Self::compile_unary_expression),
+            TokenType::Bang => Some(Self::compile_unary_expression),
             TokenType::Number => Some(Self::compile_number),
             TokenType::False => Some(Self::compile_keyword_literal),
             TokenType::Nil => Some(Self::compile_keyword_literal),

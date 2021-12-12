@@ -42,6 +42,7 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize, instruction: &Instr
         Instruction::Subtract => disassemble_simple_instruction("Subtract"),
         Instruction::Multiply => disassemble_simple_instruction("Multiply"),
         Instruction::Divide => disassemble_simple_instruction("Divide"),
+        Instruction::Not => disassemble_simple_instruction("Not"),
         Instruction::Negate => disassemble_simple_instruction("Negate"),
         Instruction::Return => disassemble_simple_instruction("Return"),
     }

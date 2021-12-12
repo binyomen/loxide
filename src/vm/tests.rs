@@ -242,6 +242,7 @@ fn arithmetic() {
     test_vm("1 / 2", [&[vn(1.0)], &[vn(1.0), vn(2.0)], &[vn(0.5)], &[]]);
 
     test_vm("-1", [&[vn(1.0)], &[vn(-1.0)], &[]]);
+    test_vm("-0", [&[vn(0.0)], &[vn(0.0)], &[]]);
 
     test_vm(
         "1 + 2 * 3",
@@ -298,4 +299,23 @@ fn arithmetic() {
             &[],
         ],
     );
+}
+
+#[test]
+fn boolean_logic() {
+    test_vm("!true", [&[vb(true)], &[vb(false)], &[]]);
+    test_vm("!false", [&[vb(false)], &[vb(true)], &[]]);
+    test_vm("!!true", [&[vb(true)], &[vb(false)], &[vb(true)], &[]]);
+    test_vm("!!false", [&[vb(false)], &[vb(true)], &[vb(false)], &[]]);
+    test_vm(
+        "!!!true",
+        [&[vb(true)], &[vb(false)], &[vb(true)], &[vb(false)], &[]],
+    );
+    test_vm(
+        "!!!false",
+        [&[vb(false)], &[vb(true)], &[vb(false)], &[vb(true)], &[]],
+    );
+
+    test_vm("!nil", [&[vni()], &[vb(true)], &[]]);
+    test_vm("!0", [&[vn(0.0)], &[vb(false)], &[]]);
 }

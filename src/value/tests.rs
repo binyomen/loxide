@@ -53,6 +53,14 @@ fn number_operations() {
 }
 
 #[test]
+fn bool_operations() {
+    assert_eq!(vb(true).not().unwrap(), vb(false));
+    assert_eq!(vb(false).not().unwrap(), vb(true));
+    assert_eq!(vni().not().unwrap(), vb(true));
+    assert_eq!(vn(0.0).not().unwrap(), vb(false));
+}
+
+#[test]
 fn number_operation_type_errors() {
     for op in [Value::add, Value::subtract, Value::multiply, Value::divide] {
         assert_eq!(
