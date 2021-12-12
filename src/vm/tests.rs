@@ -31,6 +31,23 @@ fn test_vm<const N: usize>(source_code: &str, expected_stacks: [&[Value]; N]) {
     assert_eq!(vm.test_stacks, expected_stacks_vec);
 }
 
+fn test_vm_error(source_code: &str, expected_error: &str, expected_line_number: usize) {
+    let chunk = Compiler::new(Lexer::new(source_code)).compile().unwrap();
+
+    let mut output = String::new();
+    let mut vm = Vm::with_error_printer(&chunk, |format_args| {
+        output.push_str(&format_args.to_string());
+    });
+    vm.interpret().unwrap_err();
+    drop(vm);
+
+    let expected_error_string = format!(
+        "{}\n[line {}] in script\n",
+        expected_error, expected_line_number
+    );
+    assert_eq!(output, expected_error_string);
+}
+
 #[test]
 fn simple_chunk_doesnt_produce_an_error() {
     let mut chunk = Chunk::new();
@@ -318,4 +335,32 @@ fn boolean_logic() {
 
     test_vm("!nil", [&[vni()], &[vb(true)], &[]]);
     test_vm("!0", [&[vn(0.0)], &[vb(false)], &[]]);
+}
+
+#[test]
+fn arithmetic_type_errors() {
+    test_vm_error("-true", "Operand 'true' must be a number.", 1);
+    test_vm_error("-false", "Operand 'false' must be a number.", 1);
+    test_vm_error("-nil", "Operand 'nil' must be a number.", 1);
+
+    test_vm_error("\n-\nnil\n", "Operand 'nil' must be a number.", 2);
+
+    for op in ['+', '-', '*', '/'] {
+        test_vm_error("true + false", "Operand 'true' must be a number.", 1);
+        test_vm_error(
+            &format!("true {} false", op),
+            "Operand 'true' must be a number.",
+            1,
+        );
+        test_vm_error(
+            &format!("true {} nil", op),
+            "Operand 'true' must be a number.",
+            1,
+        );
+        test_vm_error(
+            &format!("nil {} true", op),
+            "Operand 'nil' must be a number.",
+            1,
+        );
+    }
 }

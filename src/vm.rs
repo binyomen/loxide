@@ -5,9 +5,12 @@ mod tests;
 
 #[cfg(feature = "debug_trace_execution")]
 use crate::debug::disassemble_instruction;
-use crate::{
-    chunk::{Chunk, ChunkCursor, Instruction},
-    value::{value_to_string, Value},
+use {
+    crate::{
+        chunk::{Chunk, ChunkCursor, Instruction},
+        value::{value_to_string, Value},
+    },
+    std::fmt,
 };
 
 const STACK_SIZE: usize = 256;
@@ -92,6 +95,8 @@ pub struct Vm<'a> {
 
     #[cfg(test)]
     test_stacks: Vec<Vec<Value>>,
+    #[cfg(test)]
+    error_printer: Box<dyn FnMut(fmt::Arguments) + 'a>,
 }
 
 impl<'a> Vm<'a> {
@@ -103,13 +108,29 @@ impl<'a> Vm<'a> {
 
             #[cfg(test)]
             test_stacks: Vec::new(),
+            #[cfg(test)]
+            error_printer: Box::new(|format_args| eprint!("{}", format_args)),
+        }
+    }
+
+    #[cfg(test)]
+    fn with_error_printer(
+        chunk: &'a Chunk,
+        error_printer: impl FnMut(fmt::Arguments) + 'a,
+    ) -> Self {
+        Self {
+            error_printer: Box::new(error_printer),
+            ..Self::new(chunk)
         }
     }
 
     pub fn interpret(&mut self) -> Result<(), ()> {
-        self.interpret_inner().map_err(|format_args| {
-            eprintln!("{}", format_args);
-            eprintln!("[line {}] in script", self.cursor.previous_line());
+        self.interpret_inner().map_err(|error_string| {
+            self.print_error(format_args!("{}\n", error_string));
+            self.print_error(format_args!(
+                "[line {}] in script\n",
+                self.cursor.previous_line()
+            ));
             self.stack.reset();
         })
     }
@@ -204,5 +225,15 @@ impl<'a> Vm<'a> {
         self.stack.push(result);
 
         Ok(())
+    }
+
+    #[cfg(not(test))]
+    fn print_error(&mut self, format_args: fmt::Arguments) {
+        eprint!("{}", format_args);
+    }
+
+    #[cfg(test)]
+    fn print_error(&mut self, format_args: fmt::Arguments) {
+        (self.error_printer)(format_args);
     }
 }
